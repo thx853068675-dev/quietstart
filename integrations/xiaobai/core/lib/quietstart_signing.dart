@@ -42,6 +42,7 @@ List<int> zipView(List<int> bytes) {
     throw const FormatException('安装包中央目录无效');
   }
   final directory = BytesBuilder(copy: false);
+  final names = <String>{};
   var position = cd, total = 0;
   for (var i = 0; i < count; i++) {
     if (position + 46 > end ||
@@ -62,6 +63,9 @@ List<int> zipView(List<int> bytes) {
     }
     final header =
         Uint8List.fromList(bytes.sublist(position, position + 46 + name));
+    if (!names.add(base64Encode(header.sublist(46)))) {
+      throw const FormatException('安装包内有重复文件名');
+    }
     ByteData.sublistView(header).setUint16(30, 0, Endian.little);
     directory.add(header);
     directory.add(bytes.sublist(next - comment, next));

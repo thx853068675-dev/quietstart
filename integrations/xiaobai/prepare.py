@@ -77,6 +77,9 @@ def main():
               model.updateStep(3, (step) => step.copyWith(loading: true, error: message));
             });''')
     page = app/'lib/pages/index_page.dart'
+    guide = app/'lib/pages/user_guide_page.dart'
+    replace(guide, "import 'dart:io';", "import 'package:ohos_adapter/ohos_adapter.dart';")
+    replace(guide, 'Platform.isOhos', 'ohosAdapter.isOhos')
     replace(page, 'AppInfoBox(name: "小白调试助手",', 'AppInfoBox(name: "小白调试助手 · 轻启整合版",')
     replace(page, '          const DebugSteps(),', '''          const Padding(
             padding: EdgeInsets.symmetric(horizontal: 24, vertical: 8),
