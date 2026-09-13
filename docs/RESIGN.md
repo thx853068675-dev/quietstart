@@ -85,8 +85,23 @@ python3 tools/resign-hap.py --input input.hap --output resign-work/quietstart-si
 
 ## 验证范围
 
-2026-09-13，自动脚本已在 macOS Apple Silicon / DevEco Studio 26 / SDK 26 上用真实 0.9.42 HAP 运行成功，官方工具的四次密码交互、内外签名验证和包内容校验均通过。脚本另有失败不交付、原包不覆盖、程序不被改动、损坏输入拒绝等离线测试。Windows 提供 Python 路径配置入口，尚未在 Windows 实测。
+2026-09-13，使用当前 `tools/resign-hap.py` 在 macOS Apple Silicon / DevEco Studio 26 / SDK 26 上重新签名真实 0.9.42 HAP，四次官方密码交互和内外签名校验均通过。随后安装的就是这次脚本输出文件，未重新编译或替换成其他构建产物。
 
-同一天，采用相同重签机制的包已在 Pura X / HarmonyOS 7 全新侧载：仅安装主包，UiTest 由轻启自行安装；后续新会话心跳正常，独立点击自测 1 项通过、0 项失败，用户确认拔掉 USB 后重新本机激活仍在线。首次工作会话曾出现 AAMS 超时，当时电脑也在采集 UiTest 布局，尚未确认因果；后续会话正常。
+| 步骤 | 实测结果 |
+| --- | --- |
+| 安装前清理 | 旧包不存在，应用数据目录不存在，清理轻启临时文件 |
+| 只安装脚本输出的主 HAP | 成功；首次启动前仅有 `entry` 模块，files 目录为空 |
+| 手机自行安装 UiTest | 成功；出现 `entry_test`（94200），安装回执与脚本产物中的工作模块摘要一致 |
+| 首次本机启动 | 成功；新会话初始化完成，持续更新心跳，无接口错误 |
+| 独立 UiTest 点击测试 | 1 项通过、0 项失败；点击轻启自身按钮并观察成功标记，3366 ms |
+| 拔 USB 后重新本机激活 | 用户确认“在线”；当时电脑已无法连接手机，未直接采集脱机后的日志 |
 
-自动脚本本次生成的新文件未再次清空手机安装。第二个开发者账号、其他设备和 AGC 邀请分发链路尚未覆盖。官方签名参数见[工具说明](https://github.com/openharmony/developtools_hapsigner/blob/master/README.md)。
+独立点击测试由电脑 `aa test` 发起，使用的是手机自行安装的工作模块；它与脱机激活的用户确认是两项不同证据。用户未明确报告本轮拔线后的真实广告跳过结果，不将其计为已验证。测试设备为 Pura X / HarmonyOS 7。
+
+该次安装包 SHA-256：`212825e8bf0cf94ea2ec2a4fae62591a1737554ff1abade44827549a6382a4a9`。
+
+早前手动重签实验首次会话曾出现 AAMS 超时，当时电脑也在执行 UiTest 布局采集，未确认因果；本次自动脚本产物的首个会话正常。脚本有 7 项独立离线测试，覆盖失败不交付、拒绝覆盖、程序内容保持一致和损坏输入拒绝。第二个开发者账号、其他设备和 Windows 尚未实测。
+
+**AGC 路线是另一种安装方式，目前失败。** 0.9.42 经 AGC 安装主包后，自行安装发布签名工作模块时，手机返回 `9568322 / signature verification failed due to not trusted app source`。主包显示应用市场来源；存档上传包中的内置模块证书与已安装主包相同，签名校验有效，但发布签名的调试侧载受到系统来源限制。参见[华为发布证书说明](https://developer.huawei.com/consumer/cn/doc/doccenter-dev-faq/faqs-package-structure-65)。本重签脚本的成功不代表 AGC 链路已打通。
+
+官方签名参数见[工具说明](https://github.com/openharmony/developtools_hapsigner/blob/master/README.md)。
