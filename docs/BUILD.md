@@ -2,6 +2,8 @@
 
 用户从零侧载请按 [安装指南](INSTALL.md) 操作。本文仅说明构建入口。
 
+已有完整主 HAP、希望不编译源码直接换签名，请看[内外包重签教程](RESIGN.md)。
+
 ## 环境与签名
 
 维护环境为 macOS Apple Silicon、DevEco Studio 26.0.0、HarmonyOS SDK 26。先创建本机 `build-profile.json5`，在 IDE 同步依赖并为目标手机配置自己的调试签名。首次步骤见 [安装指南第 3 节](INSTALL.md#3-从源码生成自己的安装包)。

@@ -20,3 +20,13 @@ python3 tools/run-tests.py --community
 下载工具只接受来源清单中的 URL 和 SHA-256，不提取图片；网络失败或内容变化时停止。原始数据保存在 Git 忽略目录中，不属于项目 MIT 授权内容。不要未经审阅把真实手机全量布局、截图或社区原件提交到仓库。
 
 0.9.40 的 348 项数字对应 worker、community-replay、community-structural 三个测试文件，并非所有测试总数。离线测试不证明真机时延、耗电或广告覆盖率；缺失 enabled、层次信息的模拟实验单独统计。
+
+## 预编译包重签
+
+自动重签的独立离线测试（不读取真实签名材料、不连接手机）：
+
+```sh
+python3 tests/resign-hap.test.py
+```
+
+真实签名与设备验证范围见[重签说明](RESIGN.md#验证范围)。

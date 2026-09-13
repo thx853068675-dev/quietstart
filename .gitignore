@@ -18,6 +18,7 @@
 
 # Generated distribution and private material
 /dist/
+/resign-work/
 *.hap
 *.app
 *.pem
