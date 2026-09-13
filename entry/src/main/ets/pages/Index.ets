@@ -562,27 +562,30 @@ struct Index {
   }
   private guideTitle(): string {
     if (!this.online) { return '先让轻启连接上手机'; }
+    if (!this.skipEnabled) { return '自动跳过未开启'; }
     if (this.pendingCount()) { return '' + this.pendingCount() + ' 条规则待确认'; }
     if (!this.approvedCount()) { return '打开应用，开始学习'; }
-    return this.skipEnabled ? '规则已就绪，正常使用即可' : '自动跳过已暂停';
+    return '规则已就绪，正常使用即可';
   }
   private guideDescription(): string {
     if (!this.online) { return '开启开发者模式和无线调试，填写端口即可连接。'; }
+    if (!this.skipEnabled) { return '开启后，仅跳过你已确认并启用的广告样式。'; }
     if (this.pendingCount()) { return '核对按钮文字与位置，启用后自动跳过。'; }
     if (!this.approvedCount()) { return '遇到开屏广告后，到规则页确认样式。'; }
-    return this.skipEnabled ? '新样式会出现在规则页。' : '开启总开关即可恢复。';
+    return '新样式会出现在规则页。';
   }
   private guideAction(): string {
     if (!this.online) { return '开始本机连接'; }
+    if (!this.skipEnabled) { return '开启自动跳过'; }
     if (this.pendingCount()) { return '去确认规则'; }
     if (!this.approvedCount() && (!this.learningEnabled || !this.discoverApps)) { return '开启自动发现与学习'; }
-    return this.approvedCount() && !this.skipEnabled ? '开启自动跳过' : '';
+    return '';
   }
   private continueGuide(): void {
     if (!this.online) { this.detail = 'activation'; }
+    else if (!this.skipEnabled) { this.setEnabled(true); }
     else if (this.pendingCount()) { this.ruleBundle = ''; this.showAllRules = false; this.go(2); }
     else if (!this.approvedCount() && (!this.learningEnabled || !this.discoverApps)) { this.setDiscovery(true); this.setLearning(true); }
-    else if (this.approvedCount() && !this.skipEnabled) { this.setEnabled(true); }
 
   }
   private setDiscovery(value: boolean): void {
