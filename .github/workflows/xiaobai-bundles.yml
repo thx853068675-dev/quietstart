@@ -49,6 +49,11 @@ jobs:
       - name: Resolve application dependencies
         working-directory: upstream-xiaobai/flutter/hap_installer
         run: flutter pub get
+      - name: Test manual version selection
+        working-directory: upstream-xiaobai/flutter/hap_installer
+        env:
+          QUIETSTART_TEST_HAP: ${{ github.workspace }}/quietstart.hap
+        run: flutter test test/quietstart_selection_test.dart
       - name: Build modified assistant
         working-directory: upstream-xiaobai/flutter/hap_installer
         run: flutter build ${{ matrix.platform }} --release

@@ -1,6 +1,6 @@
 # 一键重签已有 HAP
 
-**普通用户推荐直接使用 [Mac / Windows 整合包](../integrations/xiaobai/USAGE.md)**：助手、HAP 在同一个 ZIP 中，点击“选择内置轻启 → 开始调试”，自动处理内外模块，无需 DevEco、SDK 或脚本。
+**普通用户推荐直接使用 [Mac / Windows 整合包](../integrations/xiaobai/USAGE.md)**：助手、HAP 在同一个 ZIP 中，点击“选择 HAP → 开始调试”，自动处理内外模块，无需 DevEco、SDK 或脚本。
 
 下文保留给需要自行使用签名材料的用户，是另一条安装路线；其中的开发环境要求不适用于整合版。
 

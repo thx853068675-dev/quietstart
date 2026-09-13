@@ -31,13 +31,11 @@ def main():
     shutil.copytree(HERE / 'core', app / 'packages/quietstart_signing',
                     ignore=shutil.ignore_patterns('.dart_tool', 'build'), dirs_exist_ok=True)
     shutil.copyfile(HERE / 'QuietStartAdapter.dart', app / 'lib/hdc/QuietStartAdapter.dart')
-    (app / 'assets/quietstart').mkdir(exist_ok=True)
-    shutil.copyfile(args.hap, app / 'assets/quietstart/quietstart.hap')
+    shutil.copyfile(HERE / 'selection_test.dart', app / 'test/quietstart_selection_test.dart')
     for file in [app/'pubspec.yaml', app/'plugins/native_core/pubspec.yaml']:
         replace(file, 'sdk: ^2.19.6', "sdk: '>=3.6.0 <4.0.0'")
     replace(app/'plugins/ohos_adapter/pubspec.yaml', "sdk: '>=2.19.6 <3.0.0'", "sdk: '>=3.6.0 <4.0.0'")
     replace(app/'pubspec.yaml', '\ndependencies:\n', '\ndependencies:\n  quietstart_signing:\n    path: packages/quietstart_signing\n')
-    replace(app/'pubspec.yaml', '    - assets/store/\n', '    - assets/quietstart/\n    - assets/store/\n')
     service = app/'lib/hdc/CmdService.dart'
     replace(service, "import 'dart:convert';", "import 'dart:convert';\nimport 'package:flutter/services.dart';\nimport 'QuietStartAdapter.dart';")
     replace(service, '  Future<String> getOutPath(String inPath) async {', '''  Future<String> getQuietStartSignerDir() async {
@@ -76,17 +74,62 @@ def main():
     }
     var cmd = "";''')
     view = app/'lib/EcoViewModel.dart'
-    replace(view, '  toSelectFile(BuildContext context) async {', '''  selectBundledQuietStart(BuildContext context) async {
+    replace(view, "import 'dart:isolate';", "import 'dart:isolate';\nimport 'package:quietstart_signing/quietstart_signing.dart' as quietstart;")
+    replace(view, '  toSelectFile(BuildContext context) async {', '''  String? quietStartFileName;
+  Directory? quietStartSelectionDirectory;
+
+  selectQuietStartFile(BuildContext context, {String? selectedPath}) async {
     if (fileLoading) return;
     fileLoading = true;
     notifyListeners();
     try {
-      final data = await rootBundle.load('assets/quietstart/quietstart.hap');
-      final file = File(path.join(await getTempDir(), 'quietstart-bundled.hap'));
-      await file.writeAsBytes(data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes), flush: true);
-      hapInfo = await _loadApp(context, file.path);
+      final filePath = selectedPath ?? (await FilePicker.platform.pickFiles(
+        type: FileType.custom, allowedExtensions: ['hap'], allowMultiple: false,
+        dialogTitle: '选择要安装的轻启 HAP',
+      ))?.files.single.path;
+      if (filePath == null) return; // Cancelling preserves the previous selection.
+      hapInfo = null;
+      quietStartFileName = null;
+      final previous = quietStartSelectionDirectory;
+      quietStartSelectionDirectory = null;
+      if (previous != null && await previous.exists()) await previous.delete(recursive: true);
+      notifyListeners();
+      if (path.extension(filePath).toLowerCase() != '.hap') {
+        throw const FormatException('请选择包含工作模块的轻启主 HAP');
+      }
+      final selected = await Isolate.run(() {
+        final file = File(filePath);
+        if (file.lengthSync() > quietstart.maxBytes) {
+          throw const FormatException('安装包过大');
+        }
+        final bytes = file.readAsBytesSync();
+        return (package: quietstart.QuietStartPackage.inspect(bytes), bytes: bytes);
+      });
+      final package = selected.package;
+      if (package == null) throw const FormatException('所选文件不是轻启安装包');
+      quietStartSelectionDirectory = await Directory.systemTemp.createTemp('quietstart-selection-');
+      final snapshot = File(path.join(quietStartSelectionDirectory!.path, path.basename(filePath)));
+      await snapshot.writeAsBytes(selected.bytes, flush: true);
+      await File(path.join(quietStartSelectionDirectory!.path, 'module.json'))
+          .writeAsBytes(package.files['module.json']!, flush: true);
+      debugPath = quietStartSelectionDirectory!.path;
+      final app = package.main['app'];
+      final version = app['versionName'] as String?;
+      hapInfo = HapInfo(
+        packageName: quietstart.bundleName,
+        pathList: [snapshot.path],
+        version: '${version == null || version.trim().isEmpty ? "版本名称未提供" : version}（${app["versionCode"]}）',
+        deviceType: List<String>.from(package.main['module']['deviceTypes'] ?? []),
+      );
+      quietStartFileName = path.basename(filePath);
+    } on FormatException catch (e) {
+      hapInfo = null;
+      quietStartFileName = null;
+      toask(context, e.message);
     } catch (_) {
-      toask(context, '无法读取内置轻启，请重新解压完整整合包');
+      hapInfo = null;
+      quietStartFileName = null;
+      toask(context, '无法读取安装包，请选择完整的轻启主 HAP');
     } finally {
       fileLoading = false;
       notifyListeners();
@@ -104,16 +147,21 @@ def main():
     replace(page, 'AppInfoBox(name: "小白调试助手",', 'AppInfoBox(name: "小白调试助手 · 轻启整合版",')
     replace(page, '          const DebugSteps(),', '''          const Padding(
             padding: EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-            child: Text('轻启维护者修改版 · 基于小白调试助手。登录账号、连接手机后，选择内置轻启并开始调试。主包和工作模块会一起重签。'),
+            child: Text('轻启维护者修改版 · 选择要安装的轻启 HAP，核对版本后开始调试。主包和工作模块会一起重签。'),
           ),
-          Consumer<EcoViewModel>(builder: (context, model, _) => Center(
-            child: FilledButton.tonalIcon(
-              onPressed: model.fileLoading ? null : () => model.selectBundledQuietStart(context),
-              icon: const Icon(Icons.install_mobile),
-              label: const Text('选择内置轻启 0.9.43'),
-            ),
-          )),
           const DebugSteps(),''')
+    replace(page, 'if (model.hapInfo?.packageName == null ||', 'if (model.fileLoading || model.hapInfo?.packageName == null ||')
+    replace(page, 'title: model.hapInfo?.packageName == null ? "未选择" : "包名: ${model.hapInfo?.packageName} 支持设备: ${model.hapInfo?.deviceType}",',
+            'title: model.hapInfo == null ? "尚未选择轻启版本" : "轻启 ${model.hapInfo?.version ?? \"版本未知\"}",')
+    replace(page, 'subTitle: "文件格式: .app,.hap,.hsp",',
+            'subTitle: model.hapInfo == null ? "选择或拖入轻启主 HAP" : "${model.quietStartFileName ?? model.hapInfo?.pathList.first}\\n${model.hapInfo?.packageName}",')
+    replace(page, 'model.toSelectFile(context);', 'model.selectQuietStartFile(context);')
+    replace(page, 'const Text("选择")', 'Text(model.hapInfo == null ? "选择 HAP" : "更换版本")')
+    replace(page, 'model.openFile(context, file.path!);', 'model.selectQuietStartFile(context, selectedPath: file.path!);')
+    replace(page, 'viewmodel.openFile(context!, url);', 'viewmodel.selectQuietStartFile(context!, selectedPath: url);')
+    replace(page, 'viewmodel.openFile(context!, call.arguments["path"]);', 'viewmodel.selectQuietStartFile(context!, selectedPath: call.arguments["path"]);')
+    drop = app/'lib/widget/FileDropArea.dart'
+    replace(drop, 'setState(() async {', 'setState(() {')
     print('Applied QuietStart integration to', app)
 
 if __name__ == '__main__':
