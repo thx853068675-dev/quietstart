@@ -1,163 +1,92 @@
-# 已有 HAP 的内外包重签
+# 一键重签已有 HAP
 
-适合已经拿到轻启完整主 HAP、希望用自己的设备授权调试签名侧载的用户。无需重新编译源码，但需要电脑、官方 SDK 签名工具和有效签名材料。普通工具仅重签外层 HAP 不够。
+用 [resign-hap.py](../tools/resign-hap.py) 自动处理内外两个包。无需编译源码，也不用手动解压、算摘要或回填文件；最终仍只安装一个主 HAP。
 
-**流程：提取内置模块 → 重签模块 → 更新摘要并放回主包 → 重签主包 → 只安装主包。**
+## 第一次使用
 
-## 1. 准备材料
+准备以下材料，放在自己的电脑上：
 
-- 完整的轻启主 HAP，内含 `resources/rawfile/quietstart-worker.hap` 和 `quietstart-worker.json`。不是 AGC 的 `.app` 容器，也不是独立测试 HAP。
-- 自己的密钥库 `.p12`（或工具支持的 `.jks`）、密钥别名、密钥库密码和密钥密码。
-- 与密钥匹配的调试证书 `.cer`、有效调试 Profile `.p7b`。
-- Profile 必须授权目标手机，且包名与当前轻启一致：`com.tonghongxiang.quietstart`。内外包使用同一套材料。
-- 官方 DevEco Studio / HarmonyOS SDK、Python 3，以及本仓库中的 `tools/verify-single-package.py`。
+- 完整的轻启主 HAP，包含内置 UiTest 工作模块。
+- 自己的调试证书 `.cer`、设备授权 Profile `.p7b`、密钥库 `.p12` / `.jks`。
+- 密钥别名，以及密钥密码和密钥库密码。
+- 官方 DevEco Studio / HarmonyOS SDK、Python 3。
 
-签名材料的申请与设备授权参见[华为自动签名说明](https://developer.huawei.com/consumer/cn/doc/HarmonyOS-Guides/ide-signing-auto)及[调试 Profile 说明](https://developer.huawei.com/consumer/cn/doc/doccenter-getting-started/agc-help-debug-profile-0000002248181278)。命令参数可查[官方签名工具文档](https://github.com/openharmony/developtools_hapsigner/blob/master/README.md)。
+Profile 必须有效、授权自己的手机，且与当前包名 `com.tonghongxiang.quietstart` 匹配。证书与密钥也必须匹配。材料申请参见[华为调试 Profile 说明](https://developer.huawei.com/consumer/cn/doc/doccenter-getting-started/agc-help-debug-profile-0000002248181278)和[自动签名说明](https://developer.huawei.com/consumer/cn/doc/HarmonyOS-Guides/ide-signing-auto)。
 
-下面命令要求你知道密钥密码。DevEco 自动签名配置里的密码字段可能是加密值，不能直接当作密码输入。不知道密码时可继续用 IDE 按[源码构建流程](INSTALL.md#3-从源码生成自己的安装包)签名构建。
+**不要改包名解决授权问题。** 轻启目前使用固定包名；其他开发者账号能否申请合适的 Profile，需在该账号实际确认，本次尚未验证跨账号申请。不要把私钥或密码发给作者。
 
-**不要修改包名来绕过 Profile 不匹配。** 当前启动逻辑使用固定包名。另一个开发者账号能否申请符合要求的 Profile，需要在该账号实际确认；本次实验没有覆盖跨账号申请。不要向作者发送密码或私钥。
-
-## 2. 提取内包，生成待签名文件
-
-以下是 macOS 的手动命令流程，适用于 0.9.42 的单包结构。Windows 尚未实测，不能将这些 Shell 命令直接粘贴到 CMD。
-
-在项目根目录新开终端，将原始主 HAP 复制为 `input.hap`。所有输出放入一个新的本地目录，不覆盖原包：
+下载仓库后，在项目根目录运行：
 
 ```sh
-mkdir -m 700 resign-work
-python3 tools/verify-single-package.py input.hap
+python3 tools/resign-hap.py
 ```
 
-校验通过后，提取并重新生成工作模块 ZIP。重新写入 ZIP 是为了不沿用旧 HAP 的签名块，文件内容保持不变：
+也可以只下载这个 Python 脚本，在它所在目录执行 `python3 resign-hap.py`，不需要其他项目文件。
 
-```sh
-python3 - <<'PY'
-from pathlib import Path
-from io import BytesIO
-from zipfile import ZipFile
+按照提示填写主 HAP、输出文件、证书、Profile、密钥库的路径和别名。macOS 默认安装位置的 DevEco 工具会自动找到；找不到时会询问 Java 和 `hap-sign-tool.jar` 的路径。文件路径可以带空格。
 
-with ZipFile('input.hap') as main:
-    worker = main.read('resources/rawfile/quietstart-worker.hap')
-    Path('resign-work/worker-original.hap').write_bytes(worker)
-    with ZipFile(BytesIO(worker)) as old, ZipFile('resign-work/worker-unsigned.hap', 'w') as new:
-        for item in old.infolist():
-            new.writestr(item, old.read(item.filename))
-print('已生成 worker-unsigned.hap')
-PY
-```
+接着按官方工具的提示输入密码：先询问密钥密码 `KeyPwd`、再询问密钥库密码 `KeystorePwd`；内包、外包各一次，共四次提示。若两种密码相同，分别输入同一密码。工具提示的输入时限为 30 秒。
 
-## 3. 先签内包
+脚本不会读取或保存密码，也不会把密码放进命令参数。DevEco 配置中的加密密码不能当作明文输入。如果不知道自动生成密钥的密码，可以继续使用 IDE 的[源码签名构建流程](INSTALL.md#3-从源码生成自己的安装包)。
 
-设置工具和签名文件位置。下列 `你的…` 路径及别名必须替换成自己的值；路径有空格时保留双引号。
+## 已经配置过，只换一个 HAP
 
-```sh
-IDE_ROOT="/Applications/DevEco-Studio.app/Contents"
-JAVA_BIN="$IDE_ROOT/jbr/Contents/Home/bin/java"
-SIGN_JAR="$IDE_ROOT/sdk/default/openharmony/toolchains/lib/hap-sign-tool.jar"
-CERT_FILE="/你的签名目录/debug.cer"
-PROFILE_FILE="/你的签名目录/debug.p7b"
-KEYSTORE_FILE="/你的签名目录/debug.p12"
-KEY_ALIAS="你的密钥别名"
+可把工具和材料路径写入本地 JSON，避免每次重复填写。推荐放在 Git 已忽略的 `resign-work/signing.json` 中。下面是模板，所有“你的…”值需要替换，Windows 路径建议使用 `/` 分隔：
 
-sign_hap() {
-  local min_api
-  min_api=$(python3 -c 'import sys,json,zipfile; print(json.loads(zipfile.ZipFile(sys.argv[1]).read("module.json"))["app"]["minAPIVersion"])' "$1") || return
-  "$JAVA_BIN" -jar "$SIGN_JAR" sign-app \
-    -mode localSign -keyAlias "$KEY_ALIAS" \
-    -appCertFile "$CERT_FILE" -profileFile "$PROFILE_FILE" \
-    -keystoreFile "$KEYSTORE_FILE" -signAlg SHA256withECDSA \
-    -compatibleVersion "$min_api" -signCode 1 -pwdInputMode 1 \
-    -inFile "$1" -outFile "$2"
+```json
+{
+  "java": "/Applications/DevEco-Studio.app/Contents/jbr/Contents/Home/bin/java",
+  "sign_tool": "/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/toolchains/lib/hap-sign-tool.jar",
+  "certificate": "/你的签名目录/debug.cer",
+  "profile": "/你的签名目录/debug.p7b",
+  "keystore": "/你的签名目录/debug.p12",
+  "key_alias": "你的密钥别名",
+  "algorithm": "SHA256withECDSA"
 }
-
-sign_hap resign-work/worker-unsigned.hap resign-work/worker-signed.hap
 ```
 
-按工具提示交互输入密码，确认签名成功后再继续。示例算法适用于本次使用的 EC 密钥；其他密钥须使用匹配算法。`minAPIVersion` 从包内读取，不要自行改成手机界面显示的系统版本号。
-
-## 4. 放回内包，并更新清单
-
-重签会改变模块文件的二进制内容，因此必须重新计算 SHA-256 和大小。否则轻启会提示“内置工作模块校验失败”。
+随后只需一条命令：
 
 ```sh
-python3 - <<'PY'
-from pathlib import Path
-from zipfile import ZipFile
-from io import BytesIO
-import hashlib, json
-
-worker = Path('resign-work/worker-signed.hap').read_bytes()
-with ZipFile('input.hap') as old:
-    manifest_path = 'resources/rawfile/quietstart-worker.json'
-    manifest = json.loads(old.read(manifest_path))
-    with ZipFile(BytesIO(worker)) as inner:
-        module = json.loads(inner.read('module.json'))
-    assert module['app']['bundleName'] == manifest['bundleName']
-    assert module['app']['versionCode'] == manifest['versionCode']
-    assert module['module']['name'] == manifest['moduleName'] == 'entry_test'
-    manifest.update(sha256=hashlib.sha256(worker).hexdigest(), size=len(worker))
-    replacements = {
-        'resources/rawfile/quietstart-worker.hap': worker,
-        manifest_path: (json.dumps(manifest, indent=2) + '\n').encode(),
-    }
-    with ZipFile('resign-work/main-unsigned.hap', 'w') as new:
-        for item in old.infolist():
-            new.writestr(item, replacements.get(item.filename, old.read(item.filename)))
-print('已生成 main-unsigned.hap，并更新内置模块校验清单')
-PY
+python3 tools/resign-hap.py --input input.hap --output resign-work/quietstart-signed.hap --config resign-work/signing.json
 ```
 
-## 5. 最后签主包，并验证两层
+每次使用新的输出文件名；脚本不会覆盖原包或已有输出。JSON 不支持密码字段。默认算法适用于本次的 EC 密钥，其他密钥须在配置中选用匹配算法。
 
-在同一个终端中继续使用第 3 步的签名材料：
+## 自动执行了什么
 
-```sh
-sign_hap resign-work/main-unsigned.hap resign-work/quietstart-signed.hap
+1. 校验原主包与内置模块的签名、包名、版本和摘要。
+2. 用你的签名材料重签内置 UiTest 模块。
+3. 更新模块的 SHA-256 和文件大小，放回主包。
+4. 用同一套材料重签主包。
+5. 验证最终签名、内外一致性和程序内容，再输出最终 HAP。
 
-"$JAVA_BIN" -jar "$SIGN_JAR" verify-app \
-  -inFile resign-work/worker-signed.hap \
-  -outCertChain resign-work/worker-chain.cer -outProfile resign-work/worker-profile.p7b
+任何一步失败都会停止，临时文件自动清理，不交付未验证的包。原始程序内容保持不变，主包内部只替换工作模块和校验清单。脚本不连接手机、不自动安装或卸载应用、不申请证书、不下载 SDK。
 
-"$JAVA_BIN" -jar "$SIGN_JAR" verify-app \
-  -inFile resign-work/quietstart-signed.hap \
-  -outCertChain resign-work/main-chain.cer -outProfile resign-work/main-profile.p7b
+## 安装
 
-python3 tools/verify-single-package.py resign-work/quietstart-signed.hap
-```
+看到“完成，只需侧载此主 HAP”后，使用输出路径对应的文件，按[侧载安装指南](INSTALL.md#2-开启开发者模式并连接电脑)开启开发者模式并通过 hdc 安装。
 
-两次 `verify-app` 必须成功，最后必须出现 `Single-package verified`。本地校验通过不代替手机的证书信任和设备授权校验。**签完外包后，不要再替换内包或编辑任何包内文件，否则外包签名失效。**
+只安装最终主 HAP；首次本机连接时，轻启自行安装内置 UiTest。在线后拔掉 USB，再在手机重新连接一次确认。
 
-## 6. 只安装最终主包
+若旧版使用不同签名，系统可能拒绝覆盖安装。先备份数据；接受旧规则和配置会被删除后，才卸载旧版再装。脚本不会代你执行卸载。之后升级也需继续使用同一套有效签名。
 
-按[侧载安装指南](INSTALL.md#2-开启开发者模式并连接电脑)开启开发者模式、USB 调试并授权电脑。先用 `hdc list targets` 确认目标设备，再安装：
+## 遇到问题
 
-```sh
-HDC_BIN="$IDE_ROOT/sdk/default/openharmony/toolchains/hdc"
-"$HDC_BIN" list targets
-DEVICE_ID="上一步显示的目标设备ID"
-"$HDC_BIN" -t "$DEVICE_ID" install -r resign-work/quietstart-signed.hap
-```
-
-**不要安装 `worker-signed.hap`。** 打开轻启，按向导开启无线调试、填写当前端口并允许“轻启本机激活”；轻启会自行安装内置模块。显示在线后拔掉 USB，再在手机重新连接一次确认。
-
-若原来装的是另一套签名，覆盖安装可能被系统拒绝。先备份需要保留的数据；只有接受规则、配置会被删除后，才卸载旧版再安装。本流程不会自动卸载应用。之后升级也要继续使用同一套有效签名。
-
-## 常见问题
-
-| 现象 | 检查项 |
+| 提示或现象 | 处理 |
 | --- | --- |
-| 本体安装成功，但工作模块安装失败 | 是否只签了外层；内外证书、Profile 是否一致；目标设备是否获授权 |
-| 内置工作模块校验失败 | 第 4 步是否使用重签后模块重新计算摘要和大小 |
-| 包名或 Profile 不匹配 | 是否为当前固定包名申请了合法 Profile；不要修改包名碰运气 |
-| 找不到内置模块 | 是否误用了独立测试 HAP、旧版双包或 `.app` 容器 |
-| 签名工具提示密码错误 | 是否误把 DevEco 配置中的加密密码当成明文；密钥别名是否正确 |
-| 无线调试没有端口或连接超时 | 确认 Wi-Fi 和系统授权，重新进入无线调试页，以当前显示的端口为准 |
+| 请在本机交互终端运行 | 打开系统终端运行；不要重定向标准输入，官方工具需要读取密码 |
+| 文件不存在 | 检查证书、Profile、密钥库、SDK 路径；配置文件中的路径不自动展开 Shell 环境变量 |
+| 密码错误 / 输入超时 | 核对密钥别名和密码，重新运行；不要输入 DevEco 配置里的加密值 |
+| 输出已存在 | 选择另一个输出文件名 |
+| 包名、模块或摘要错误 | 使用完整的轻启单包，不能使用独立测试 HAP、旧双包或 AGC `.app` 容器 |
+| 本体或模块安装失败 | 核对手机是否获 Profile 授权、证书有效性、已有应用签名是否一致；本地校验不代替手机的授权校验 |
+| 无线调试没有端口 / 连接超时 | 检查 Wi-Fi 和系统授权，以无线调试页当前显示的端口为准 |
 
-## 本次实测范围
+## 验证范围
 
-2026-09-13，在 macOS / SDK 26 上，把 0.9.42 现成发布签名 HAP 的内外包换成另一套设备授权调试签名，未编译源码。两层程序字节码保持一致；全新安装时仅有主模块、数据为空；UiTest 由轻启自行安装。后续本机会话心跳正常，独立 UiTest 点击自测 1 项通过、0 项失败，用户确认拔掉 USB 后重新本机激活仍在线。
+2026-09-13，自动脚本已在 macOS Apple Silicon / DevEco Studio 26 / SDK 26 上用真实 0.9.42 HAP 运行成功，官方工具的四次密码交互、内外签名验证和包内容校验均通过。脚本另有失败不交付、原包不覆盖、程序不被改动、损坏输入拒绝等离线测试。Windows 提供 Python 路径配置入口，尚未在 Windows 实测。
 
-首次工作会话曾出现 AAMS 连接超时，当时电脑也在采集 UiTest 布局，尚未确认两者因果；后续会话正常。实验中的签名密码由本机 IDE 配置读取，本教程使用官方工具的交互密码模式，不提供或公开作者的签名材料。
+同一天，采用相同重签机制的包已在 Pura X / HarmonyOS 7 全新侧载：仅安装主包，UiTest 由轻启自行安装；后续新会话心跳正常，独立点击自测 1 项通过、0 项失败，用户确认拔掉 USB 后重新本机激活仍在线。首次工作会话曾出现 AAMS 超时，当时电脑也在采集 UiTest 布局，尚未确认因果；后续会话正常。
 
-已验证设备为 Pura X / HarmonyOS 7；不同开发者账号、其他手机、Windows 及 AGC 分发链路尚未覆盖。这是手动重签教程，目前没有面向所有签名工具的一键重签保证。
+自动脚本本次生成的新文件未再次清空手机安装。第二个开发者账号、其他设备和 AGC 邀请分发链路尚未覆盖。官方签名参数见[工具说明](https://github.com/openharmony/developtools_hapsigner/blob/master/README.md)。
