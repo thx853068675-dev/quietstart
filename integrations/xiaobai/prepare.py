@@ -35,7 +35,7 @@ def main():
     for file in [app/'pubspec.yaml', app/'plugins/native_core/pubspec.yaml']:
         replace(file, 'sdk: ^2.19.6', "sdk: '>=3.6.0 <4.0.0'")
     replace(app/'plugins/ohos_adapter/pubspec.yaml', "sdk: '>=2.19.6 <3.0.0'", "sdk: '>=3.6.0 <4.0.0'")
-    replace(app/'pubspec.yaml', '\ndependencies:\n', '\ndependencies:\n  quietstart_signing:\n    path: packages/quietstart_signing\n')
+    replace(app/'pubspec.yaml', '\ndependencies:\n', '\ndependencies:\n  file_selector: 1.0.3\n  quietstart_signing:\n    path: packages/quietstart_signing\n')
     service = app/'lib/hdc/CmdService.dart'
     replace(service, "import 'dart:convert';", "import 'dart:convert';\nimport 'package:flutter/services.dart';\nimport 'QuietStartAdapter.dart';")
     replace(service, '  Future<String> getOutPath(String inPath) async {', '''  Future<String> getQuietStartSignerDir() async {
@@ -74,7 +74,7 @@ def main():
     }
     var cmd = "";''')
     view = app/'lib/EcoViewModel.dart'
-    replace(view, "import 'dart:isolate';", "import 'dart:isolate';\nimport 'package:quietstart_signing/quietstart_signing.dart' as quietstart;")
+    replace(view, "import 'dart:isolate';", "import 'dart:isolate';\nimport 'package:quietstart_signing/quietstart_signing.dart' as quietstart;\nimport 'package:file_selector/file_selector.dart' as selector;")
     replace(view, '  toSelectFile(BuildContext context) async {', '''  String? quietStartFileName;
   Directory? quietStartSelectionDirectory;
 
@@ -83,10 +83,10 @@ def main():
     fileLoading = true;
     notifyListeners();
     try {
-      final filePath = selectedPath ?? (await FilePicker.platform.pickFiles(
-        type: FileType.custom, allowedExtensions: ['hap'], allowMultiple: false,
-        dialogTitle: '选择要安装的轻启 HAP',
-      ))?.files.single.path;
+      final filePath = selectedPath ?? (await selector.openFile(
+        acceptedTypeGroups: [const selector.XTypeGroup(label: '轻启 HAP', extensions: ['hap'])],
+        confirmButtonText: '选择此版本',
+      ))?.path;
       if (filePath == null) return; // Cancelling preserves the previous selection.
       hapInfo = null;
       quietStartFileName = null;
