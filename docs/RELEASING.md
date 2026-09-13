@@ -22,8 +22,6 @@ python3 tools/export-source.py
 
 安装 ZIP 的生成方式见 [构建说明](BUILD.md)，接收者的完整流程见 [侧载安装指南](INSTALL.md)。
 
-## 小白整合包
+## 安装工具
 
-使用 [集成构建流程](../integrations/xiaobai/README.md)从固定源码修订生成 Mac / Windows 版本。每个平台只发布一个 ZIP，同时包含助手、HAP、步骤和第三方说明。不要把本机助手的整个数据或缓存目录打包进去。
-
-发布前分别检查两端构建产物、HAP 摘要、签名和手机自安装结果；Windows 未做真机测试时明确注明。修改版应保留“小白调试助手 · 轻启整合版”标识，不冒充上游官方版本。
+小白轻启整合版的源码、Mac / Windows 构建和发布现已独立迁至 [quietstart-installer](https://github.com/thx853068675-dev/quietstart-installer)。本仓库只维护轻启应用及其构建、侧载脚本。
