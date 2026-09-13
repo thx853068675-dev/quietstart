@@ -1,6 +1,6 @@
 # 侧载安装指南
 
-**只想安装使用：优先看 [整合包安装步骤](../integrations/xiaobai/USAGE.md)**。Mac Apple 芯片 / Windows x64 各一个 ZIP，包含修改后的小白助手与轻启 HAP，不需要自行安装 DevEco、SDK、Java 或 Python。
+**只想安装使用：优先看 [整合包安装步骤](https://github.com/thx853068675-dev/quietstart-installer/blob/main/USAGE.md)**。Mac Apple 芯片 / Windows x64 各一个 ZIP，包含修改后的小白助手与轻启 HAP，不需要自行安装 DevEco、SDK、Java 或 Python。
 
 以下为自行编译、重签或使用官方 hdc 的进阶路线。
 
