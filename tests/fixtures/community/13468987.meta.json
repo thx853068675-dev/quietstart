@@ -1,0 +1,10 @@
+{
+  "id": "13468987",
+  "url": "https://github.com/user-attachments/files/13468987/file.zip",
+  "ruleSource": "https://github.com/ganlinte/GKD-subscription/blob/main/src/apps/com.kugou.android.ts",
+  "group": "开屏广告",
+  "sha256": "6d71a55c1dd5cbf3770f67e2269a66ec055e557f0d6e103407591ca6eaedea63",
+  "expectedTargetNodeId": 8,
+  "kind": "description-nonclickable",
+  "annotation": "Target independently selected from the upstream selector and snapshot tree; raw enabled remains absent. No HarmonyOS success claim."
+}

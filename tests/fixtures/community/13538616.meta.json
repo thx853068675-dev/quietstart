@@ -1,0 +1,10 @@
+{
+  "id": "13538616",
+  "url": "https://github.com/user-attachments/files/13538616/file.zip",
+  "ruleSource": "https://github.com/ganlinte/GKD-subscription/blob/main/src/apps/com.eco.global.app.ts",
+  "group": "开屏广告",
+  "sha256": "4859604b61f888a40462dab073c40531ff1ce140d01361b1f29b79e18b04437d",
+  "expectedTargetNodeId": 10,
+  "kind": "timer-image",
+  "annotation": "Target independently selected from the upstream selector and snapshot tree; raw enabled remains absent. No HarmonyOS success claim."
+}

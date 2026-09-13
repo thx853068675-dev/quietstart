@@ -1,0 +1,20 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "module description"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "description"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "轻启"
+    },
+    {
+      "name": "skip_service_description",
+      "value": "仅在你指定的应用中，识别并点击开屏右上角的跳过按钮。自用验证版。"
+    }
+  ]
+}

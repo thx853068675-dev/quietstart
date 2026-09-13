@@ -1,0 +1,10 @@
+{
+  "id": "12775918",
+  "url": "https://github.com/user-attachments/files/12775918/file.zip",
+  "ruleSource": "https://github.com/ganlinte/GKD-subscription/blob/main/src/apps/com.ksf.yyx.ts",
+  "group": "开屏广告",
+  "sha256": "3ee697d61ff1058a4cd467409e8bdcad9b11ce6a944691c1a5a77a2ebaa37e90",
+  "expectedTargetNodeId": 29,
+  "kind": "sdk-skip-container",
+  "annotation": "Target independently selected from the upstream selector and snapshot tree; raw enabled remains absent. No HarmonyOS success claim."
+}

@@ -1,0 +1,9 @@
+const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const ts=require('/Applications/DevEco-Studio.app/Contents/tools/hvigor/hvigor-ohos-plugin/node_modules/typescript');
+for(const mode of ['first','enhanced','reject','line','sentence'])test(`cropped OCR ${mode}: bounded calls and cleanup`,async()=>{
+ let calls=0,writes=0,releases=0,deleted=0;
+ const pixels={async getImageInfo(){return {size:{width:2,height:1}}},async readPixelsToBuffer(b){new Uint8Array(b).set([230,230,230,255,245,245,245,255])},async writeBufferToPixels(b){writes++;assert.equal(new Uint8Array(b)[3],255)},async release(){releases++}};
+ const mocks={'@kit.CoreVisionKit':{textRecognition:{async recognizeText(){calls++;if(mode==='line')return {value:'欢迎\n广告\n立即查看',blocks:[{value:'欢迎 广告',lines:[{value:'广告'}]}]};if(mode==='sentence')return {value:'广告设计教程',blocks:[{value:'广告设计教程',lines:[{value:'广告设计教程'}]}]};if(mode==='first'||mode==='enhanced'&&calls===2)return {value:'广告'};if(calls===1)throw Error('OCR failed');return {value:'普通内容'}}}},'@kit.ImageKit':{image:{PixelMapFormat:{RGBA_8888:3},createImageSource(){return {async createPixelMap(){return pixels},release(){releases++}}}}},'@kit.CoreFileKit':{fileIo:{unlinkSync(){deleted++}}}};
+ const exports={};vm.runInNewContext(ts.transpileModule(fs.readFileSync('entry/src/ohosTest/ets/worker/ImageAdEvidence.ets','utf8'),{compilerOptions:{target:ts.ScriptTarget.ES2021,module:ts.ModuleKind.CommonJS}}).outputText,{exports,require(n){return mocks[n]}});
+ assert.equal(await exports.readImageAd({async screenCapture(){return true}},'/tmp',{left:0,top:0,right:1,bottom:1}),!['reject','sentence'].includes(mode));assert.equal(calls,['first','line'].includes(mode)?1:2);assert.equal(writes,['first','line'].includes(mode)?0:1);assert.equal(releases,2);assert.equal(deleted,1);
+});

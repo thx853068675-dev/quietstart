@@ -1,0 +1,293 @@
+{
+  "scope": "Offline recognition only. Original, enabled assumption, and enabled+layer assumptions reported separately; not device success rate.",
+  "results": [
+    {
+      "id": "12620583",
+      "variant": "original",
+      "kind": "overlapping-label-image",
+      "classification": "insufficient-data",
+      "reason": "目标识别：候选「跳过」缺少 enabled 状态，无法确认可点击",
+      "assumptions": [
+        "Synthetic focused root only"
+      ],
+      "source": "https://github.com/ganlinte/GKD-subscription/blob/main/src/apps/com.dongqiudi.news.ts",
+      "sha256": "6062e1d3903ec1de058bb8ceb8a82bf0f9ca27358b854794eb68196381c8375d"
+    },
+    {
+      "id": "12620583",
+      "variant": "enabled-assumed",
+      "kind": "overlapping-label-image",
+      "classification": "correct-target",
+      "reason": "已识别广告关闭目标及其依据",
+      "assumptions": [
+        "All enabled=true, not supplied by original"
+      ],
+      "source": "https://github.com/ganlinte/GKD-subscription/blob/main/src/apps/com.dongqiudi.news.ts",
+      "sha256": "6062e1d3903ec1de058bb8ceb8a82bf0f9ca27358b854794eb68196381c8375d"
+    },
+    {
+      "id": "12620583",
+      "variant": "enabled-and-z-assumed",
+      "kind": "overlapping-label-image",
+      "classification": "correct-target",
+      "reason": "已识别广告关闭目标及其依据",
+      "assumptions": [
+        "All enabled=true and zIndex=0, not supplied by original"
+      ],
+      "source": "https://github.com/ganlinte/GKD-subscription/blob/main/src/apps/com.dongqiudi.news.ts",
+      "sha256": "6062e1d3903ec1de058bb8ceb8a82bf0f9ca27358b854794eb68196381c8375d"
+    },
+    {
+      "id": "12621953",
+      "variant": "original",
+      "kind": "overlapping-label-image",
+      "classification": "insufficient-data",
+      "reason": "目标识别：候选「跳过」缺少 enabled 状态，无法确认可点击",
+      "assumptions": [
+        "Synthetic focused root only"
+      ],
+      "source": "https://github.com/ganlinte/GKD-subscription/blob/main/src/apps/com.dongqiudi.news.ts",
+      "sha256": "1471af467b9e3b28420d0e047030fa4291f329be01a67585df637e177919843c"
+    },
+    {
+      "id": "12621953",
+      "variant": "enabled-assumed",
+      "kind": "overlapping-label-image",
+      "classification": "correct-target",
+      "reason": "已识别广告关闭目标及其依据",
+      "assumptions": [
+        "All enabled=true, not supplied by original"
+      ],
+      "source": "https://github.com/ganlinte/GKD-subscription/blob/main/src/apps/com.dongqiudi.news.ts",
+      "sha256": "1471af467b9e3b28420d0e047030fa4291f329be01a67585df637e177919843c"
+    },
+    {
+      "id": "12621953",
+      "variant": "enabled-and-z-assumed",
+      "kind": "overlapping-label-image",
+      "classification": "correct-target",
+      "reason": "已识别广告关闭目标及其依据",
+      "assumptions": [
+        "All enabled=true and zIndex=0, not supplied by original"
+      ],
+      "source": "https://github.com/ganlinte/GKD-subscription/blob/main/src/apps/com.dongqiudi.news.ts",
+      "sha256": "1471af467b9e3b28420d0e047030fa4291f329be01a67585df637e177919843c"
+    },
+    {
+      "id": "13842826",
+      "variant": "original",
+      "kind": "anonymous-splash-view",
+      "classification": "insufficient-data",
+      "reason": "目标识别：已读取 39 个可见控件；跳过/关闭文字、无障碍描述及图标标识均未匹配。图片内文字或未开放的控件可能无法读取，不能据此判定没有广告",
+      "assumptions": [
+        "Synthetic focused root only"
+      ],
+      "source": "https://github.com/ganlinte/GKD-subscription/blob/main/src/apps/info.muge.appshare.ts",
+      "sha256": "d69382c4d5ec7577dd46328de39f8aca39505d994fd76c6e3d22c2b2ccdbaec1"
+    },
+    {
+      "id": "13842826",
+      "variant": "enabled-assumed",
+      "kind": "anonymous-splash-view",
+      "classification": "miss",
+      "reason": "点击位置与其他控件重叠：目标「跳过图标」中心 (972, 204) 可能被覆盖，取消点击",
+      "assumptions": [
+        "All enabled=true, not supplied by original"
+      ],
+      "source": "https://github.com/ganlinte/GKD-subscription/blob/main/src/apps/info.muge.appshare.ts",
+      "sha256": "d69382c4d5ec7577dd46328de39f8aca39505d994fd76c6e3d22c2b2ccdbaec1"
+    },
+    {
+      "id": "13842826",
+      "variant": "enabled-and-z-assumed",
+      "kind": "anonymous-splash-view",
+      "classification": "correct-target",
+      "reason": "已识别广告关闭目标及其依据",
+      "assumptions": [
+        "All enabled=true and zIndex=0, not supplied by original"
+      ],
+      "source": "https://github.com/ganlinte/GKD-subscription/blob/main/src/apps/info.muge.appshare.ts",
+      "sha256": "d69382c4d5ec7577dd46328de39f8aca39505d994fd76c6e3d22c2b2ccdbaec1"
+    },
+    {
+      "id": "13939089",
+      "variant": "original",
+      "kind": "anonymous-splash-view",
+      "classification": "insufficient-data",
+      "reason": "目标识别：已读取 30 个可见控件；跳过/关闭文字、无障碍描述及图标标识均未匹配。图片内文字或未开放的控件可能无法读取，不能据此判定没有广告",
+      "assumptions": [
+        "Synthetic focused root only"
+      ],
+      "source": "https://github.com/ganlinte/GKD-subscription/blob/main/src/apps/info.muge.appshare.ts",
+      "sha256": "215f77f3e86ac084fff25229150f00d23782b9bb83cd1b44d639c0f96af31bd0"
+    },
+    {
+      "id": "13939089",
+      "variant": "enabled-assumed",
+      "kind": "anonymous-splash-view",
+      "classification": "miss",
+      "reason": "点击位置与其他控件重叠：目标「跳过图标」中心 (972, 204) 可能被覆盖，取消点击",
+      "assumptions": [
+        "All enabled=true, not supplied by original"
+      ],
+      "source": "https://github.com/ganlinte/GKD-subscription/blob/main/src/apps/info.muge.appshare.ts",
+      "sha256": "215f77f3e86ac084fff25229150f00d23782b9bb83cd1b44d639c0f96af31bd0"
+    },
+    {
+      "id": "13939089",
+      "variant": "enabled-and-z-assumed",
+      "kind": "anonymous-splash-view",
+      "classification": "correct-target",
+      "reason": "已识别广告关闭目标及其依据",
+      "assumptions": [
+        "All enabled=true and zIndex=0, not supplied by original"
+      ],
+      "source": "https://github.com/ganlinte/GKD-subscription/blob/main/src/apps/info.muge.appshare.ts",
+      "sha256": "215f77f3e86ac084fff25229150f00d23782b9bb83cd1b44d639c0f96af31bd0"
+    },
+    {
+      "id": "12775918",
+      "variant": "original",
+      "kind": "sdk-skip-container",
+      "classification": "insufficient-data",
+      "reason": "目标识别：候选「跳过」缺少 enabled 状态，无法确认可点击",
+      "assumptions": [
+        "Synthetic focused root only"
+      ],
+      "source": "https://github.com/ganlinte/GKD-subscription/blob/main/src/apps/com.ksf.yyx.ts",
+      "sha256": "3ee697d61ff1058a4cd467409e8bdcad9b11ce6a944691c1a5a77a2ebaa37e90"
+    },
+    {
+      "id": "12775918",
+      "variant": "enabled-assumed",
+      "kind": "sdk-skip-container",
+      "classification": "correct-target",
+      "reason": "已识别广告关闭目标及其依据",
+      "assumptions": [
+        "All enabled=true, not supplied by original"
+      ],
+      "source": "https://github.com/ganlinte/GKD-subscription/blob/main/src/apps/com.ksf.yyx.ts",
+      "sha256": "3ee697d61ff1058a4cd467409e8bdcad9b11ce6a944691c1a5a77a2ebaa37e90"
+    },
+    {
+      "id": "12775918",
+      "variant": "enabled-and-z-assumed",
+      "kind": "sdk-skip-container",
+      "classification": "correct-target",
+      "reason": "已识别广告关闭目标及其依据",
+      "assumptions": [
+        "All enabled=true and zIndex=0, not supplied by original"
+      ],
+      "source": "https://github.com/ganlinte/GKD-subscription/blob/main/src/apps/com.ksf.yyx.ts",
+      "sha256": "3ee697d61ff1058a4cd467409e8bdcad9b11ce6a944691c1a5a77a2ebaa37e90"
+    },
+    {
+      "id": "12775919",
+      "variant": "original",
+      "kind": "timer-separator-image",
+      "classification": "insufficient-data",
+      "reason": "目标识别：已读取 42 个可见控件；跳过/关闭文字、无障碍描述及图标标识均未匹配。图片内文字或未开放的控件可能无法读取，不能据此判定没有广告",
+      "assumptions": [
+        "Synthetic focused root only"
+      ],
+      "source": "https://github.com/ganlinte/GKD-subscription/blob/main/src/apps/com.ksf.yyx.ts",
+      "sha256": "1cc3ddcf8341050b41ea7bc1426259c8d56cef7343ec109048ea66d090576b6c"
+    },
+    {
+      "id": "12775919",
+      "variant": "enabled-assumed",
+      "kind": "timer-separator-image",
+      "classification": "correct-target",
+      "reason": "已识别广告关闭目标及其依据",
+      "assumptions": [
+        "All enabled=true, not supplied by original"
+      ],
+      "source": "https://github.com/ganlinte/GKD-subscription/blob/main/src/apps/com.ksf.yyx.ts",
+      "sha256": "1cc3ddcf8341050b41ea7bc1426259c8d56cef7343ec109048ea66d090576b6c"
+    },
+    {
+      "id": "12775919",
+      "variant": "enabled-and-z-assumed",
+      "kind": "timer-separator-image",
+      "classification": "correct-target",
+      "reason": "已识别广告关闭目标及其依据",
+      "assumptions": [
+        "All enabled=true and zIndex=0, not supplied by original"
+      ],
+      "source": "https://github.com/ganlinte/GKD-subscription/blob/main/src/apps/com.ksf.yyx.ts",
+      "sha256": "1cc3ddcf8341050b41ea7bc1426259c8d56cef7343ec109048ea66d090576b6c"
+    },
+    {
+      "id": "13468987",
+      "variant": "original",
+      "kind": "description-nonclickable",
+      "classification": "insufficient-data",
+      "reason": "目标识别：候选「跳过」缺少 enabled 状态，无法确认可点击",
+      "assumptions": [
+        "Synthetic focused root only"
+      ],
+      "source": "https://github.com/ganlinte/GKD-subscription/blob/main/src/apps/com.kugou.android.ts",
+      "sha256": "6d71a55c1dd5cbf3770f67e2269a66ec055e557f0d6e103407591ca6eaedea63"
+    },
+    {
+      "id": "13468987",
+      "variant": "enabled-assumed",
+      "kind": "description-nonclickable",
+      "classification": "miss",
+      "reason": "点击核对：候选「跳过」本身不可点击，也没有尺寸合适的可点击父容器",
+      "assumptions": [
+        "All enabled=true, not supplied by original"
+      ],
+      "source": "https://github.com/ganlinte/GKD-subscription/blob/main/src/apps/com.kugou.android.ts",
+      "sha256": "6d71a55c1dd5cbf3770f67e2269a66ec055e557f0d6e103407591ca6eaedea63"
+    },
+    {
+      "id": "13468987",
+      "variant": "enabled-and-z-assumed",
+      "kind": "description-nonclickable",
+      "classification": "miss",
+      "reason": "点击核对：候选「跳过」本身不可点击，也没有尺寸合适的可点击父容器",
+      "assumptions": [
+        "All enabled=true and zIndex=0, not supplied by original"
+      ],
+      "source": "https://github.com/ganlinte/GKD-subscription/blob/main/src/apps/com.kugou.android.ts",
+      "sha256": "6d71a55c1dd5cbf3770f67e2269a66ec055e557f0d6e103407591ca6eaedea63"
+    },
+    {
+      "id": "13538616",
+      "variant": "original",
+      "kind": "timer-image",
+      "classification": "insufficient-data",
+      "reason": "目标识别：候选「跳过图标」缺少 enabled 状态，无法确认可点击",
+      "assumptions": [
+        "Synthetic focused root only"
+      ],
+      "source": "https://github.com/ganlinte/GKD-subscription/blob/main/src/apps/com.eco.global.app.ts",
+      "sha256": "4859604b61f888a40462dab073c40531ff1ce140d01361b1f29b79e18b04437d"
+    },
+    {
+      "id": "13538616",
+      "variant": "enabled-assumed",
+      "kind": "timer-image",
+      "classification": "miss",
+      "reason": "点击位置与其他控件重叠：目标「跳过图标」中心 (1031, 157) 可能被覆盖，取消点击",
+      "assumptions": [
+        "All enabled=true, not supplied by original"
+      ],
+      "source": "https://github.com/ganlinte/GKD-subscription/blob/main/src/apps/com.eco.global.app.ts",
+      "sha256": "4859604b61f888a40462dab073c40531ff1ce140d01361b1f29b79e18b04437d"
+    },
+    {
+      "id": "13538616",
+      "variant": "enabled-and-z-assumed",
+      "kind": "timer-image",
+      "classification": "correct-target",
+      "reason": "已识别广告关闭目标及其依据",
+      "assumptions": [
+        "All enabled=true and zIndex=0, not supplied by original"
+      ],
+      "source": "https://github.com/ganlinte/GKD-subscription/blob/main/src/apps/com.eco.global.app.ts",
+      "sha256": "4859604b61f888a40462dab073c40531ff1ce140d01361b1f29b79e18b04437d"
+    }
+  ]
+}

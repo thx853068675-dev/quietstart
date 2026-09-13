@@ -1,0 +1,7 @@
+{
+  "accessibilityCapabilities": ["retrieve"],
+  "accessibilityEventTypes": ["pageStateUpdate", "pageContentUpdate", "windowUpdate"],
+  "accessibilityAbilityTypes": ["generic"],
+  "accessibilityDescription": "$string:skip_service_description",
+  "accessibilityNeedKeyEvent": false
+}

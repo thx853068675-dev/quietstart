@@ -1,0 +1,296 @@
+{
+  "attributes": {
+    "bounds": "[0,0][1320,2120]",
+    "clickable": "",
+    "displayId": "",
+    "enabled": "",
+    "focused": "",
+    "opacity": "",
+    "origBounds": "",
+    "type": "",
+    "zIndex": "",
+    "text": "",
+    "description": "",
+    "id": ""
+  },
+  "children": [
+    {
+      "attributes": {
+        "bounds": "[0,117][1320,2120]",
+        "bundleName": "com.lucky.luckincoffee",
+        "clickable": "false",
+        "displayId": "0",
+        "enabled": "true",
+        "focused": "true",
+        "opacity": "1.000000",
+        "origBounds": "[0,0][1320,2120]",
+        "type": "root",
+        "visible": "true",
+        "zIndex": "0",
+        "hostWindowId": "1",
+        "text": "",
+        "description": "",
+        "id": ""
+      },
+      "children": [
+        {
+          "attributes": {
+            "bounds": "[0,117][1320,2120]",
+            "clickable": "false",
+            "displayId": "0",
+            "enabled": "true",
+            "focused": "true",
+            "opacity": "1.000000",
+            "origBounds": "[0,0][1320,2120]",
+            "type": "RelativeContainer",
+            "visible": "true",
+            "zIndex": "0",
+            "hostWindowId": "1",
+            "text": "",
+            "description": "",
+            "id": ""
+          },
+          "children": [
+            {
+              "attributes": {
+                "bounds": "[0,117][1320,2120]",
+                "clickable": "false",
+                "displayId": "0",
+                "enabled": "true",
+                "focused": "true",
+                "opacity": "1.000000",
+                "origBounds": "[0,0][1320,2120]",
+                "type": "Navigation",
+                "visible": "true",
+                "zIndex": "0",
+                "hostWindowId": "1",
+                "text": "",
+                "description": "",
+                "id": ""
+              },
+              "children": [
+                {
+                  "attributes": {
+                    "bounds": "[0,117][1320,2120]",
+                    "clickable": "false",
+                    "displayId": "0",
+                    "enabled": "true",
+                    "focused": "false",
+                    "opacity": "1.000000",
+                    "origBounds": "[0,0][1320,2120]",
+                    "type": "NavigationContent",
+                    "visible": "true",
+                    "zIndex": "0",
+                    "hostWindowId": "1",
+                    "text": "",
+                    "description": "",
+                    "id": ""
+                  },
+                  "children": [
+                    {
+                      "attributes": {
+                        "bounds": "[0,117][1320,2120]",
+                        "clickable": "false",
+                        "displayId": "0",
+                        "enabled": "true",
+                        "focused": "true",
+                        "opacity": "1.000000",
+                        "origBounds": "[0,0][1320,2120]",
+                        "type": "NavDestination",
+                        "visible": "true",
+                        "zIndex": "0",
+                        "hostWindowId": "1",
+                        "text": "",
+                        "description": "",
+                        "id": ""
+                      },
+                      "children": [
+                        {
+                          "attributes": {
+                            "bounds": "[0,117][1320,2120]",
+                            "clickable": "false",
+                            "displayId": "0",
+                            "enabled": "true",
+                            "focused": "false",
+                            "opacity": "1.000000",
+                            "origBounds": "[0,0][1320,2120]",
+                            "type": "NavDestinationContent",
+                            "visible": "true",
+                            "zIndex": "0",
+                            "hostWindowId": "1",
+                            "text": "",
+                            "description": "",
+                            "id": ""
+                          },
+                          "children": [
+                            {
+                              "attributes": {
+                                "bounds": "[0,117][1320,2120]",
+                                "clickable": "false",
+                                "displayId": "0",
+                                "enabled": "true",
+                                "focused": "false",
+                                "opacity": "1.000000",
+                                "origBounds": "[0,0][1320,2120]",
+                                "type": "Stack",
+                                "visible": "true",
+                                "zIndex": "0",
+                                "hostWindowId": "1",
+                                "text": "",
+                                "description": "",
+                                "id": ""
+                              },
+                              "children": [
+                                {
+                                  "attributes": {
+                                    "bounds": "[0,117][1320,2120]",
+                                    "clickable": "false",
+                                    "displayId": "0",
+                                    "enabled": "true",
+                                    "focused": "false",
+                                    "opacity": "1.000000",
+                                    "origBounds": "[0,0][1320,2120]",
+                                    "type": "Stack",
+                                    "visible": "true",
+                                    "zIndex": "0",
+                                    "hostWindowId": "1",
+                                    "text": "",
+                                    "description": "",
+                                    "id": ""
+                                  },
+                                  "children": [
+                                    {
+                                      "attributes": {
+                                        "bounds": "[0,1811][1320,2120]",
+                                        "clickable": "false",
+                                        "displayId": "0",
+                                        "enabled": "true",
+                                        "focused": "false",
+                                        "opacity": "1.000000",
+                                        "origBounds": "[0,1811][1320,2120]",
+                                        "type": "Row",
+                                        "visible": "true",
+                                        "zIndex": "0",
+                                        "hostWindowId": "1",
+                                        "text": "",
+                                        "description": "",
+                                        "id": ""
+                                      },
+                                      "children": [
+                                        {
+                                          "attributes": {
+                                            "bounds": "[330,1811][990,2000]",
+                                            "clickable": "false",
+                                            "displayId": "0",
+                                            "enabled": "true",
+                                            "focused": "false",
+                                            "opacity": "1.000000",
+                                            "origBounds": "[330,1811][990,2000]",
+                                            "type": "Image",
+                                            "visible": "true",
+                                            "zIndex": "0",
+                                            "hostWindowId": "1",
+                                            "text": "",
+                                            "description": "",
+                                            "id": ""
+                                          },
+                                          "children": []
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "attributes": {
+                                    "bounds": "[0,117][1320,2120]",
+                                    "clickable": "false",
+                                    "displayId": "0",
+                                    "enabled": "true",
+                                    "focused": "false",
+                                    "opacity": "1.000000",
+                                    "origBounds": "[0,0][1320,2120]",
+                                    "type": "Stack",
+                                    "visible": "true",
+                                    "zIndex": "0",
+                                    "hostWindowId": "1",
+                                    "text": "",
+                                    "description": "",
+                                    "id": ""
+                                  },
+                                  "children": [
+                                    {
+                                      "attributes": {
+                                        "bounds": "[144,117][1176,2120]",
+                                        "clickable": "true",
+                                        "displayId": "0",
+                                        "enabled": "true",
+                                        "focused": "false",
+                                        "opacity": "1.000000",
+                                        "origBounds": "[144,0][1176,2120]",
+                                        "type": "Image",
+                                        "visible": "true",
+                                        "zIndex": "0",
+                                        "hostWindowId": "1",
+                                        "text": "",
+                                        "description": "",
+                                        "id": ""
+                                      },
+                                      "children": []
+                                    },
+                                    {
+                                      "attributes": {
+                                        "bounds": "[0,117][1320,221]",
+                                        "clickable": "false",
+                                        "displayId": "0",
+                                        "enabled": "true",
+                                        "focused": "false",
+                                        "opacity": "1.000000",
+                                        "origBounds": "[0,0][1320,221]",
+                                        "type": "Column",
+                                        "visible": "true",
+                                        "zIndex": "0",
+                                        "hostWindowId": "1",
+                                        "text": "",
+                                        "description": "",
+                                        "id": ""
+                                      },
+                                      "children": [
+                                        {
+                                          "attributes": {
+                                            "bounds": "[1007,129][1272,221]",
+                                            "clickable": "true",
+                                            "displayId": "0",
+                                            "enabled": "true",
+                                            "focused": "false",
+                                            "opacity": "1.000000",
+                                            "origBounds": "[1007,129][1272,221]",
+                                            "type": "Text",
+                                            "visible": "true",
+                                            "zIndex": "0",
+                                            "hostWindowId": "1",
+                                            "text": "跳过 | 2 s",
+                                            "description": "",
+                                            "id": ""
+                                          },
+                                          "children": []
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

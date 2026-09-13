@@ -1,0 +1,9 @@
+{
+  "id": "12883329",
+  "url": "https://github.com/user-attachments/files/12883329/file.zip",
+  "ruleSource": "https://github.com/ganlinte/GKD-subscription/blob/main/src/apps/com.zhihu.android.ts",
+  "group": "开屏广告",
+  "sha256": "48209c11f2cc2de0c8f593f4c862f7b1fa4ef2abb9191b453a4982c408805b9d",
+  "expectedTargetNodeId": 31,
+  "annotation": "Reference target follows upstream btn_skip ID (Zhihu) or close-parent of skip text (Taobao); not inferred from QuietStart output."
+}

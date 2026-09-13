@@ -1,0 +1,1455 @@
+{
+  "attributes": {
+    "type": "",
+    "bounds": "[0,0][1320,2120]",
+    "origBounds": "",
+    "focused": "",
+    "enabled": "",
+    "clickable": "",
+    "hostWindowId": "",
+    "displayId": "",
+    "opacity": "",
+    "zIndex": ""
+  },
+  "children": [
+    {
+      "attributes": {
+        "type": "WindowScene",
+        "bundleName": "com.ohos.sceneboard",
+        "bounds": "[0,0][1320,117]",
+        "origBounds": "[0,0][1320,117]",
+        "visible": "true",
+        "focused": "false",
+        "enabled": "true",
+        "clickable": "false",
+        "hostWindowId": "32",
+        "displayId": "0",
+        "opacity": "1.000000",
+        "zIndex": "0"
+      },
+      "children": [
+        {
+          "attributes": {
+            "type": "__Common__",
+            "bounds": "[0,0][1320,117]",
+            "origBounds": "[0,0][1320,117]",
+            "visible": "true",
+            "focused": "false",
+            "enabled": "true",
+            "clickable": "false",
+            "hostWindowId": "32",
+            "displayId": "0",
+            "opacity": "1.000000",
+            "zIndex": "0"
+          },
+          "children": [
+            {
+              "attributes": {
+                "type": "Stack",
+                "bounds": "[0,0][1320,117]",
+                "origBounds": "[0,0][1320,117]",
+                "visible": "true",
+                "focused": "false",
+                "enabled": "true",
+                "clickable": "false",
+                "hostWindowId": "32",
+                "displayId": "0",
+                "opacity": "1.000000",
+                "zIndex": "0"
+              },
+              "children": [
+                {
+                  "attributes": {
+                    "type": "__Common__",
+                    "bounds": "[0,0][1320,117]",
+                    "origBounds": "[0,0][1320,117]",
+                    "visible": "true",
+                    "focused": "false",
+                    "enabled": "true",
+                    "clickable": "true",
+                    "hostWindowId": "32",
+                    "displayId": "0",
+                    "opacity": "1.000000",
+                    "zIndex": "0"
+                  },
+                  "children": [
+                    {
+                      "attributes": {
+                        "type": "Stack",
+                        "bounds": "[0,0][1320,117]",
+                        "origBounds": "[0,0][1320,117]",
+                        "visible": "true",
+                        "focused": "false",
+                        "enabled": "true",
+                        "clickable": "false",
+                        "hostWindowId": "32",
+                        "displayId": "0",
+                        "opacity": "1.000000",
+                        "zIndex": "0"
+                      },
+                      "children": [
+                        {
+                          "attributes": {
+                            "type": "Row",
+                            "bounds": "[56,22][1264,94]",
+                            "origBounds": "[56,22][1264,94]",
+                            "visible": "true",
+                            "focused": "false",
+                            "enabled": "true",
+                            "clickable": "false",
+                            "hostWindowId": "32",
+                            "displayId": "0",
+                            "opacity": "1.000000",
+                            "zIndex": "0"
+                          },
+                          "children": []
+                        },
+                        {
+                          "attributes": {
+                            "type": "Stack",
+                            "bounds": "[0,0][1320,117]",
+                            "origBounds": "[0,0][1320,117]",
+                            "visible": "true",
+                            "focused": "false",
+                            "enabled": "true",
+                            "clickable": "false",
+                            "hostWindowId": "32",
+                            "displayId": "0",
+                            "opacity": "1.000000",
+                            "zIndex": "0"
+                          },
+                          "children": [
+                            {
+                              "attributes": {
+                                "type": "Row",
+                                "bounds": "[0,0][1320,117]",
+                                "origBounds": "[0,0][1320,117]",
+                                "visible": "true",
+                                "focused": "false",
+                                "enabled": "true",
+                                "clickable": "false",
+                                "hostWindowId": "32",
+                                "displayId": "0",
+                                "opacity": "1.000000",
+                                "zIndex": "0"
+                              },
+                              "children": []
+                            },
+                            {
+                              "attributes": {
+                                "type": "Stack",
+                                "bounds": "[56,22][1320,94]",
+                                "origBounds": "[56,22][1376,94]",
+                                "visible": "true",
+                                "focused": "false",
+                                "enabled": "true",
+                                "clickable": "false",
+                                "hostWindowId": "32",
+                                "displayId": "0",
+                                "opacity": "1.000000",
+                                "zIndex": "0"
+                              },
+                              "children": [
+                                {
+                                  "attributes": {
+                                    "type": "RelativeContainer",
+                                    "bounds": "[56,22][1320,94]",
+                                    "origBounds": "[56,22][1376,94]",
+                                    "visible": "true",
+                                    "focused": "false",
+                                    "enabled": "true",
+                                    "clickable": "false",
+                                    "hostWindowId": "32",
+                                    "displayId": "0",
+                                    "opacity": "1.000000",
+                                    "zIndex": "0"
+                                  },
+                                  "children": [
+                                    {
+                                      "attributes": {
+                                        "type": "Stack",
+                                        "bounds": "[56,22][177,94]",
+                                        "origBounds": "[56,22][177,94]",
+                                        "visible": "true",
+                                        "focused": "false",
+                                        "enabled": "true",
+                                        "clickable": "false",
+                                        "hostWindowId": "32",
+                                        "displayId": "0",
+                                        "opacity": "0.800000",
+                                        "zIndex": "0"
+                                      },
+                                      "children": [
+                                        {
+                                          "attributes": {
+                                            "type": "Row",
+                                            "bounds": "[56,22][177,94]",
+                                            "origBounds": "[56,22][177,94]",
+                                            "visible": "true",
+                                            "focused": "false",
+                                            "enabled": "true",
+                                            "clickable": "false",
+                                            "hostWindowId": "32",
+                                            "displayId": "0",
+                                            "opacity": "1.000000",
+                                            "zIndex": "0"
+                                          },
+                                          "children": [
+                                            {
+                                              "attributes": {
+                                                "type": "Flex",
+                                                "bounds": "[56,22][177,94]",
+                                                "origBounds": "[56,22][177,94]",
+                                                "visible": "true",
+                                                "focused": "false",
+                                                "enabled": "true",
+                                                "clickable": "false",
+                                                "hostWindowId": "32",
+                                                "displayId": "0",
+                                                "opacity": "1.000000",
+                                                "zIndex": "0"
+                                              },
+                                              "children": [
+                                                {
+                                                  "attributes": {
+                                                    "type": "Row",
+                                                    "bounds": "[56,32][123,85]",
+                                                    "origBounds": "[56,32][123,85]",
+                                                    "visible": "true",
+                                                    "focused": "false",
+                                                    "enabled": "true",
+                                                    "clickable": "false",
+                                                    "hostWindowId": "32",
+                                                    "displayId": "0",
+                                                    "opacity": "1.000000",
+                                                    "zIndex": "0"
+                                                  },
+                                                  "children": [
+                                                    {
+                                                      "attributes": {
+                                                        "type": "TextClock",
+                                                        "bounds": "[56,32][110,85]",
+                                                        "origBounds": "[56,32][110,85]",
+                                                        "visible": "true",
+                                                        "focused": "false",
+                                                        "enabled": "true",
+                                                        "clickable": "false",
+                                                        "hostWindowId": "32",
+                                                        "displayId": "0",
+                                                        "opacity": "1.000000",
+                                                        "zIndex": "0"
+                                                      },
+                                                      "children": [
+                                                        {
+                                                          "attributes": {
+                                                            "type": "Text",
+                                                            "bounds": "[56,32][110,85]",
+                                                            "origBounds": "[56,32][110,85]",
+                                                            "visible": "true",
+                                                            "focused": "false",
+                                                            "enabled": "true",
+                                                            "clickable": "false",
+                                                            "hostWindowId": "32",
+                                                            "displayId": "0",
+                                                            "opacity": "1.000000",
+                                                            "zIndex": "0"
+                                                          },
+                                                          "children": []
+                                                        }
+                                                      ]
+                                                    },
+                                                    {
+                                                      "attributes": {
+                                                        "type": "Text",
+                                                        "bounds": "[110,36][123,81]",
+                                                        "origBounds": "[110,36][123,81]",
+                                                        "visible": "true",
+                                                        "focused": "false",
+                                                        "enabled": "true",
+                                                        "clickable": "false",
+                                                        "hostWindowId": "32",
+                                                        "displayId": "0",
+                                                        "opacity": "1.000000",
+                                                        "zIndex": "0"
+                                                      },
+                                                      "children": []
+                                                    }
+                                                  ]
+                                                },
+                                                {
+                                                  "attributes": {
+                                                    "type": "TextClock",
+                                                    "bounds": "[123,32][177,85]",
+                                                    "origBounds": "[123,32][177,85]",
+                                                    "visible": "true",
+                                                    "focused": "false",
+                                                    "enabled": "true",
+                                                    "clickable": "false",
+                                                    "hostWindowId": "32",
+                                                    "displayId": "0",
+                                                    "opacity": "1.000000",
+                                                    "zIndex": "0"
+                                                  },
+                                                  "children": [
+                                                    {
+                                                      "attributes": {
+                                                        "type": "Text",
+                                                        "bounds": "[123,32][177,85]",
+                                                        "origBounds": "[123,32][177,85]",
+                                                        "visible": "true",
+                                                        "focused": "false",
+                                                        "enabled": "true",
+                                                        "clickable": "false",
+                                                        "hostWindowId": "32",
+                                                        "displayId": "0",
+                                                        "opacity": "1.000000",
+                                                        "zIndex": "0"
+                                                      },
+                                                      "children": []
+                                                    }
+                                                  ]
+                                                }
+                                              ]
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "attributes": {
+                                        "type": "Stack",
+                                        "bounds": "[189,22][351,94]",
+                                        "origBounds": "[189,22][351,94]",
+                                        "visible": "true",
+                                        "focused": "false",
+                                        "enabled": "true",
+                                        "clickable": "false",
+                                        "hostWindowId": "32",
+                                        "displayId": "0",
+                                        "opacity": "1.000000",
+                                        "zIndex": "0"
+                                      },
+                                      "children": [
+                                        {
+                                          "attributes": {
+                                            "type": "Row",
+                                            "bounds": "[189,22][351,94]",
+                                            "origBounds": "[189,22][351,94]",
+                                            "visible": "true",
+                                            "focused": "false",
+                                            "enabled": "true",
+                                            "clickable": "false",
+                                            "hostWindowId": "32",
+                                            "displayId": "0",
+                                            "opacity": "1.000000",
+                                            "zIndex": "0"
+                                          },
+                                          "children": [
+                                            {
+                                              "attributes": {
+                                                "type": "Row",
+                                                "bounds": "[189,37][231,79]",
+                                                "origBounds": "[189,37][231,79]",
+                                                "visible": "true",
+                                                "focused": "false",
+                                                "enabled": "true",
+                                                "clickable": "false",
+                                                "hostWindowId": "32",
+                                                "displayId": "0",
+                                                "opacity": "1.000000",
+                                                "zIndex": "0"
+                                              },
+                                              "children": [
+                                                {
+                                                  "attributes": {
+                                                    "type": "Row",
+                                                    "bounds": "[189,37][231,79]",
+                                                    "origBounds": "[189,37][231,79]",
+                                                    "visible": "true",
+                                                    "focused": "false",
+                                                    "enabled": "true",
+                                                    "clickable": "false",
+                                                    "hostWindowId": "32",
+                                                    "displayId": "0",
+                                                    "opacity": "1.000000",
+                                                    "zIndex": "0"
+                                                  },
+                                                  "children": [
+                                                    {
+                                                      "attributes": {
+                                                        "type": "Image",
+                                                        "bounds": "[189,37][231,79]",
+                                                        "origBounds": "[189,37][231,79]",
+                                                        "visible": "true",
+                                                        "focused": "false",
+                                                        "enabled": "true",
+                                                        "clickable": "false",
+                                                        "hostWindowId": "32",
+                                                        "displayId": "0",
+                                                        "opacity": "1.000000",
+                                                        "zIndex": "0"
+                                                      },
+                                                      "children": []
+                                                    }
+                                                  ]
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "attributes": {
+                                                "type": "Row",
+                                                "bounds": "[243,37][285,79]",
+                                                "origBounds": "[243,37][285,79]",
+                                                "visible": "true",
+                                                "focused": "false",
+                                                "enabled": "true",
+                                                "clickable": "false",
+                                                "hostWindowId": "32",
+                                                "displayId": "0",
+                                                "opacity": "1.000000",
+                                                "zIndex": "0"
+                                              },
+                                              "children": [
+                                                {
+                                                  "attributes": {
+                                                    "type": "Row",
+                                                    "bounds": "[243,37][285,79]",
+                                                    "origBounds": "[243,37][285,79]",
+                                                    "visible": "true",
+                                                    "focused": "false",
+                                                    "enabled": "true",
+                                                    "clickable": "false",
+                                                    "hostWindowId": "32",
+                                                    "displayId": "0",
+                                                    "opacity": "1.000000",
+                                                    "zIndex": "0"
+                                                  },
+                                                  "children": [
+                                                    {
+                                                      "attributes": {
+                                                        "type": "Image",
+                                                        "bounds": "[243,37][285,79]",
+                                                        "origBounds": "[243,37][285,79]",
+                                                        "visible": "true",
+                                                        "focused": "false",
+                                                        "enabled": "true",
+                                                        "clickable": "false",
+                                                        "hostWindowId": "32",
+                                                        "displayId": "0",
+                                                        "opacity": "1.000000",
+                                                        "zIndex": "0"
+                                                      },
+                                                      "children": []
+                                                    }
+                                                  ]
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "attributes": {
+                                                "type": "Row",
+                                                "bounds": "[297,37][339,79]",
+                                                "origBounds": "[297,37][339,79]",
+                                                "visible": "true",
+                                                "focused": "false",
+                                                "enabled": "true",
+                                                "clickable": "false",
+                                                "hostWindowId": "32",
+                                                "displayId": "0",
+                                                "opacity": "1.000000",
+                                                "zIndex": "0"
+                                              },
+                                              "children": [
+                                                {
+                                                  "attributes": {
+                                                    "type": "Row",
+                                                    "bounds": "[297,37][339,79]",
+                                                    "origBounds": "[297,37][339,79]",
+                                                    "visible": "true",
+                                                    "focused": "false",
+                                                    "enabled": "true",
+                                                    "clickable": "false",
+                                                    "hostWindowId": "32",
+                                                    "displayId": "0",
+                                                    "opacity": "1.000000",
+                                                    "zIndex": "0"
+                                                  },
+                                                  "children": [
+                                                    {
+                                                      "attributes": {
+                                                        "type": "Image",
+                                                        "bounds": "[297,37][339,79]",
+                                                        "origBounds": "[297,37][339,79]",
+                                                        "visible": "true",
+                                                        "focused": "false",
+                                                        "enabled": "true",
+                                                        "clickable": "false",
+                                                        "hostWindowId": "32",
+                                                        "displayId": "0",
+                                                        "opacity": "1.000000",
+                                                        "zIndex": "0"
+                                                      },
+                                                      "children": []
+                                                    }
+                                                  ]
+                                                }
+                                              ]
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "attributes": {
+                                "type": "RelativeContainer",
+                                "bounds": "[0,22][1264,94]",
+                                "origBounds": "[-56,22][1264,94]",
+                                "visible": "true",
+                                "focused": "false",
+                                "enabled": "true",
+                                "clickable": "false",
+                                "hostWindowId": "32",
+                                "displayId": "0",
+                                "opacity": "0.800000",
+                                "zIndex": "0"
+                              },
+                              "children": [
+                                {
+                                  "attributes": {
+                                    "type": "Stack",
+                                    "bounds": "[898,22][950,94]",
+                                    "origBounds": "[898,22][950,94]",
+                                    "visible": "true",
+                                    "focused": "false",
+                                    "enabled": "true",
+                                    "clickable": "false",
+                                    "hostWindowId": "32",
+                                    "displayId": "0",
+                                    "opacity": "1.000000",
+                                    "zIndex": "0"
+                                  },
+                                  "children": [
+                                    {
+                                      "attributes": {
+                                        "type": "Row",
+                                        "bounds": "[904,22][950,94]",
+                                        "origBounds": "[904,22][950,94]",
+                                        "visible": "true",
+                                        "focused": "false",
+                                        "enabled": "true",
+                                        "clickable": "false",
+                                        "hostWindowId": "32",
+                                        "displayId": "0",
+                                        "opacity": "1.000000",
+                                        "zIndex": "0"
+                                      },
+                                      "children": [
+                                        {
+                                          "attributes": {
+                                            "type": "SymbolGlyph",
+                                            "bounds": "[904,34][950,82]",
+                                            "origBounds": "[904,34][950,82]",
+                                            "visible": "true",
+                                            "focused": "false",
+                                            "enabled": "true",
+                                            "clickable": "false",
+                                            "hostWindowId": "32",
+                                            "displayId": "0",
+                                            "opacity": "1.000000",
+                                            "zIndex": "0"
+                                          },
+                                          "children": []
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "attributes": {
+                                    "type": "Stack",
+                                    "bounds": "[950,22][1009,94]",
+                                    "origBounds": "[950,22][1009,94]",
+                                    "visible": "true",
+                                    "focused": "false",
+                                    "enabled": "true",
+                                    "clickable": "false",
+                                    "hostWindowId": "32",
+                                    "displayId": "0",
+                                    "opacity": "1.000000",
+                                    "zIndex": "0"
+                                  },
+                                  "children": [
+                                    {
+                                      "attributes": {
+                                        "type": "Row",
+                                        "bounds": "[956,22][1009,94]",
+                                        "origBounds": "[956,22][1009,94]",
+                                        "visible": "true",
+                                        "focused": "false",
+                                        "enabled": "true",
+                                        "clickable": "false",
+                                        "hostWindowId": "32",
+                                        "displayId": "0",
+                                        "opacity": "1.000000",
+                                        "zIndex": "0"
+                                      },
+                                      "children": [
+                                        {
+                                          "attributes": {
+                                            "type": "Stack",
+                                            "bounds": "[956,34][1009,82]",
+                                            "origBounds": "[956,34][1009,82]",
+                                            "visible": "true",
+                                            "focused": "false",
+                                            "enabled": "true",
+                                            "clickable": "false",
+                                            "hostWindowId": "32",
+                                            "displayId": "0",
+                                            "opacity": "1.000000",
+                                            "zIndex": "0"
+                                          },
+                                          "children": [
+                                            {
+                                              "attributes": {
+                                                "type": "Row",
+                                                "bounds": "[956,34][1009,82]",
+                                                "origBounds": "[956,34][1009,82]",
+                                                "visible": "true",
+                                                "focused": "false",
+                                                "enabled": "true",
+                                                "clickable": "false",
+                                                "hostWindowId": "32",
+                                                "displayId": "0",
+                                                "opacity": "1.000000",
+                                                "zIndex": "0"
+                                              },
+                                              "children": [
+                                                {
+                                                  "attributes": {
+                                                    "type": "SymbolGlyph",
+                                                    "bounds": "[956,34][987,82]",
+                                                    "origBounds": "[956,34][987,82]",
+                                                    "visible": "true",
+                                                    "focused": "false",
+                                                    "enabled": "true",
+                                                    "clickable": "false",
+                                                    "hostWindowId": "32",
+                                                    "displayId": "0",
+                                                    "opacity": "1.000000",
+                                                    "zIndex": "0"
+                                                  },
+                                                  "children": []
+                                                },
+                                                {
+                                                  "attributes": {
+                                                    "type": "Stack",
+                                                    "bounds": "[987,34][1009,82]",
+                                                    "origBounds": "[987,34][1009,82]",
+                                                    "visible": "true",
+                                                    "focused": "false",
+                                                    "enabled": "true",
+                                                    "clickable": "false",
+                                                    "hostWindowId": "32",
+                                                    "displayId": "0",
+                                                    "opacity": "1.000000",
+                                                    "zIndex": "0"
+                                                  },
+                                                  "children": [
+                                                    {
+                                                      "attributes": {
+                                                        "type": "SymbolGlyph",
+                                                        "bounds": "[987,34][1009,82]",
+                                                        "origBounds": "[987,34][1009,82]",
+                                                        "visible": "true",
+                                                        "focused": "false",
+                                                        "enabled": "true",
+                                                        "clickable": "false",
+                                                        "hostWindowId": "32",
+                                                        "displayId": "0",
+                                                        "opacity": "1.000000",
+                                                        "zIndex": "0"
+                                                      },
+                                                      "children": []
+                                                    }
+                                                  ]
+                                                }
+                                              ]
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "attributes": {
+                                    "type": "Stack",
+                                    "bounds": "[1009,22][1066,94]",
+                                    "origBounds": "[1009,22][1066,94]",
+                                    "visible": "true",
+                                    "focused": "false",
+                                    "enabled": "true",
+                                    "clickable": "false",
+                                    "hostWindowId": "32",
+                                    "displayId": "0",
+                                    "opacity": "1.000000",
+                                    "zIndex": "0"
+                                  },
+                                  "children": [
+                                    {
+                                      "attributes": {
+                                        "type": "Column",
+                                        "bounds": "[1015,22][1066,94]",
+                                        "origBounds": "[1015,22][1066,94]",
+                                        "visible": "true",
+                                        "focused": "false",
+                                        "enabled": "true",
+                                        "clickable": "false",
+                                        "hostWindowId": "32",
+                                        "displayId": "0",
+                                        "opacity": "1.000000",
+                                        "zIndex": "0"
+                                      },
+                                      "children": [
+                                        {
+                                          "attributes": {
+                                            "type": "Text",
+                                            "bounds": "[1015,34][1066,62]",
+                                            "origBounds": "[1015,34][1066,62]",
+                                            "visible": "true",
+                                            "focused": "false",
+                                            "enabled": "true",
+                                            "clickable": "false",
+                                            "hostWindowId": "32",
+                                            "displayId": "0",
+                                            "opacity": "1.000000",
+                                            "zIndex": "0"
+                                          },
+                                          "children": []
+                                        },
+                                        {
+                                          "attributes": {
+                                            "type": "Text",
+                                            "bounds": "[1015,54][1066,82]",
+                                            "origBounds": "[1015,54][1066,82]",
+                                            "visible": "true",
+                                            "focused": "false",
+                                            "enabled": "true",
+                                            "clickable": "false",
+                                            "hostWindowId": "32",
+                                            "displayId": "0",
+                                            "opacity": "1.000000",
+                                            "zIndex": "0"
+                                          },
+                                          "children": []
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "attributes": {
+                                    "type": "Stack",
+                                    "bounds": "[1066,22][1152,94]",
+                                    "origBounds": "[1066,22][1152,94]",
+                                    "visible": "true",
+                                    "focused": "false",
+                                    "enabled": "true",
+                                    "clickable": "false",
+                                    "hostWindowId": "32",
+                                    "displayId": "0",
+                                    "opacity": "1.000000",
+                                    "zIndex": "0"
+                                  },
+                                  "children": [
+                                    {
+                                      "attributes": {
+                                        "type": "Row",
+                                        "bounds": "[1072,22][1152,94]",
+                                        "origBounds": "[1072,22][1152,94]",
+                                        "visible": "true",
+                                        "focused": "false",
+                                        "enabled": "true",
+                                        "clickable": "false",
+                                        "hostWindowId": "32",
+                                        "displayId": "0",
+                                        "opacity": "1.000000",
+                                        "zIndex": "0"
+                                      },
+                                      "children": [
+                                        {
+                                          "attributes": {
+                                            "type": "Row",
+                                            "bounds": "[1072,34][1152,82]",
+                                            "origBounds": "[1072,34][1152,82]",
+                                            "visible": "true",
+                                            "focused": "false",
+                                            "enabled": "true",
+                                            "clickable": "false",
+                                            "hostWindowId": "32",
+                                            "displayId": "0",
+                                            "opacity": "1.000000",
+                                            "zIndex": "0"
+                                          },
+                                          "children": [
+                                            {
+                                              "attributes": {
+                                                "type": "Stack",
+                                                "bounds": "[1072,34][1152,82]",
+                                                "origBounds": "[1072,34][1152,82]",
+                                                "visible": "true",
+                                                "focused": "false",
+                                                "enabled": "true",
+                                                "clickable": "false",
+                                                "hostWindowId": "32",
+                                                "displayId": "0",
+                                                "opacity": "1.000000",
+                                                "zIndex": "0"
+                                              },
+                                              "children": [
+                                                {
+                                                  "attributes": {
+                                                    "type": "SymbolGlyph",
+                                                    "bounds": "[1072,34][1140,82]",
+                                                    "origBounds": "[1072,34][1140,82]",
+                                                    "visible": "true",
+                                                    "focused": "false",
+                                                    "enabled": "true",
+                                                    "clickable": "false",
+                                                    "hostWindowId": "32",
+                                                    "displayId": "0",
+                                                    "opacity": "1.000000",
+                                                    "zIndex": "0"
+                                                  },
+                                                  "children": []
+                                                },
+                                                {
+                                                  "attributes": {
+                                                    "type": "SymbolGlyph",
+                                                    "bounds": "[1072,34][1152,82]",
+                                                    "origBounds": "[1072,34][1152,82]",
+                                                    "visible": "true",
+                                                    "focused": "false",
+                                                    "enabled": "true",
+                                                    "clickable": "false",
+                                                    "hostWindowId": "32",
+                                                    "displayId": "0",
+                                                    "opacity": "1.000000",
+                                                    "zIndex": "0"
+                                                  },
+                                                  "children": []
+                                                },
+                                                {
+                                                  "attributes": {
+                                                    "type": "SymbolGlyph",
+                                                    "bounds": "[1072,34][1152,82]",
+                                                    "origBounds": "[1072,34][1152,82]",
+                                                    "visible": "true",
+                                                    "focused": "false",
+                                                    "enabled": "true",
+                                                    "clickable": "false",
+                                                    "hostWindowId": "32",
+                                                    "displayId": "0",
+                                                    "opacity": "1.000000",
+                                                    "zIndex": "0"
+                                                  },
+                                                  "children": []
+                                                }
+                                              ]
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "attributes": {
+                                    "type": "Stack",
+                                    "bounds": "[1152,22][1264,94]",
+                                    "origBounds": "[1152,22][1264,94]",
+                                    "visible": "true",
+                                    "focused": "false",
+                                    "enabled": "true",
+                                    "clickable": "false",
+                                    "hostWindowId": "32",
+                                    "displayId": "0",
+                                    "opacity": "1.000000",
+                                    "zIndex": "0"
+                                  },
+                                  "children": [
+                                    {
+                                      "attributes": {
+                                        "type": "Row",
+                                        "bounds": "[1158,22][1264,94]",
+                                        "origBounds": "[1158,22][1264,94]",
+                                        "visible": "true",
+                                        "focused": "false",
+                                        "enabled": "true",
+                                        "clickable": "false",
+                                        "hostWindowId": "32",
+                                        "displayId": "0",
+                                        "opacity": "1.000000",
+                                        "zIndex": "0"
+                                      },
+                                      "children": [
+                                        {
+                                          "attributes": {
+                                            "type": "Stack",
+                                            "bounds": "[1158,34][1242,82]",
+                                            "origBounds": "[1158,34][1242,82]",
+                                            "visible": "true",
+                                            "focused": "false",
+                                            "enabled": "true",
+                                            "clickable": "false",
+                                            "hostWindowId": "32",
+                                            "displayId": "0",
+                                            "opacity": "1.000000",
+                                            "zIndex": "0"
+                                          },
+                                          "children": [
+                                            {
+                                              "attributes": {
+                                                "type": "Stack",
+                                                "bounds": "[1158,34][1242,82]",
+                                                "origBounds": "[1158,34][1242,82]",
+                                                "visible": "true",
+                                                "focused": "false",
+                                                "enabled": "true",
+                                                "clickable": "false",
+                                                "hostWindowId": "32",
+                                                "displayId": "0",
+                                                "opacity": "1.000000",
+                                                "zIndex": "0"
+                                              },
+                                              "children": [
+                                                {
+                                                  "attributes": {
+                                                    "type": "SymbolGlyph",
+                                                    "bounds": "[1158,34][1242,82]",
+                                                    "origBounds": "[1158,34][1242,82]",
+                                                    "visible": "true",
+                                                    "focused": "false",
+                                                    "enabled": "true",
+                                                    "clickable": "false",
+                                                    "hostWindowId": "32",
+                                                    "displayId": "0",
+                                                    "opacity": "1.000000",
+                                                    "zIndex": "0"
+                                                  },
+                                                  "children": []
+                                                },
+                                                {
+                                                  "attributes": {
+                                                    "type": "Text",
+                                                    "bounds": "[1176,39][1216,78]",
+                                                    "origBounds": "[1176,39][1216,78]",
+                                                    "visible": "true",
+                                                    "focused": "false",
+                                                    "enabled": "true",
+                                                    "clickable": "false",
+                                                    "hostWindowId": "32",
+                                                    "displayId": "0",
+                                                    "opacity": "1.000000",
+                                                    "zIndex": "0"
+                                                  },
+                                                  "children": []
+                                                }
+                                              ]
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "attributes": {
+                                            "type": "SymbolGlyph",
+                                            "bounds": "[1242,34][1264,82]",
+                                            "origBounds": "[1242,34][1264,82]",
+                                            "visible": "true",
+                                            "focused": "false",
+                                            "enabled": "true",
+                                            "clickable": "false",
+                                            "hostWindowId": "32",
+                                            "displayId": "0",
+                                            "opacity": "1.000000",
+                                            "zIndex": "0"
+                                          },
+                                          "children": []
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "attributes": {
+                            "type": "Stack",
+                            "bounds": "[618,16][702,100]",
+                            "origBounds": "[618,16][702,100]",
+                            "visible": "true",
+                            "focused": "false",
+                            "enabled": "true",
+                            "clickable": "false",
+                            "hostWindowId": "32",
+                            "displayId": "0",
+                            "opacity": "1.000000",
+                            "zIndex": "0"
+                          },
+                          "children": [
+                            {
+                              "attributes": {
+                                "type": "Stack",
+                                "bounds": "[618,16][702,100]",
+                                "origBounds": "[618,16][702,100]",
+                                "visible": "true",
+                                "focused": "false",
+                                "enabled": "true",
+                                "clickable": "false",
+                                "hostWindowId": "32",
+                                "displayId": "0",
+                                "opacity": "1.000000",
+                                "zIndex": "0"
+                              },
+                              "children": [
+                                {
+                                  "attributes": {
+                                    "type": "metaballNode",
+                                    "bounds": "[450,0][870,117]",
+                                    "origBounds": "[450,-9][870,125]",
+                                    "visible": "true",
+                                    "focused": "false",
+                                    "enabled": "true",
+                                    "clickable": "true",
+                                    "hostWindowId": "32",
+                                    "displayId": "0",
+                                    "opacity": "1.000000",
+                                    "zIndex": "0"
+                                  },
+                                  "children": []
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "attributes": {
+        "type": "root",
+        "bundleName": "com.ximalaya.ting.xmharmony",
+        "bounds": "[0,117][1320,2120]",
+        "origBounds": "[0,0][1320,2120]",
+        "visible": "true",
+        "focused": "false",
+        "enabled": "true",
+        "clickable": "false",
+        "hostWindowId": "1281",
+        "displayId": "0",
+        "opacity": "1.000000",
+        "zIndex": "0"
+      },
+      "children": [
+        {
+          "attributes": {
+            "type": "Stack",
+            "bounds": "[0,117][1320,2120]",
+            "origBounds": "[0,0][1320,2120]",
+            "visible": "true",
+            "focused": "false",
+            "enabled": "true",
+            "clickable": "false",
+            "hostWindowId": "1281",
+            "displayId": "0",
+            "opacity": "1.000000",
+            "zIndex": "0"
+          },
+          "children": [
+            {
+              "attributes": {
+                "type": "Column",
+                "bounds": "[0,117][1320,2120]",
+                "origBounds": "[0,0][1320,2120]",
+                "visible": "true",
+                "focused": "false",
+                "enabled": "true",
+                "clickable": "false",
+                "hostWindowId": "1281",
+                "displayId": "0",
+                "opacity": "1.000000",
+                "zIndex": "0"
+              },
+              "children": [
+                {
+                  "attributes": {
+                    "type": "NodeContainer",
+                    "bounds": "[0,117][1320,2120]",
+                    "origBounds": "[0,0][1320,2120]",
+                    "visible": "true",
+                    "focused": "false",
+                    "enabled": "true",
+                    "clickable": "false",
+                    "hostWindowId": "1281",
+                    "displayId": "0",
+                    "opacity": "1.000000",
+                    "zIndex": "0"
+                  },
+                  "children": [
+                    {
+                      "attributes": {
+                        "type": "BuilderProxyNode",
+                        "bounds": "[0,117][1320,2120]",
+                        "origBounds": "[0,0][1320,2120]",
+                        "visible": "true",
+                        "focused": "false",
+                        "enabled": "true",
+                        "clickable": "false",
+                        "hostWindowId": "1281",
+                        "displayId": "0",
+                        "opacity": "1.000000",
+                        "zIndex": "0"
+                      },
+                      "children": [
+                        {
+                          "attributes": {
+                            "type": "Stack",
+                            "bounds": "[0,117][1320,2120]",
+                            "origBounds": "[0,0][1320,2120]",
+                            "visible": "true",
+                            "focused": "false",
+                            "enabled": "true",
+                            "clickable": "false",
+                            "hostWindowId": "1281",
+                            "displayId": "0",
+                            "opacity": "1.000000",
+                            "zIndex": "0"
+                          },
+                          "children": [
+                            {
+                              "attributes": {
+                                "type": "Stack",
+                                "bounds": "[0,117][1320,2120]",
+                                "origBounds": "[0,0][1320,2120]",
+                                "visible": "true",
+                                "focused": "false",
+                                "enabled": "true",
+                                "clickable": "false",
+                                "hostWindowId": "1281",
+                                "displayId": "0",
+                                "opacity": "1.000000",
+                                "zIndex": "0"
+                              },
+                              "children": [
+                                {
+                                  "attributes": {
+                                    "type": "Column",
+                                    "bounds": "[0,117][1320,2120]",
+                                    "origBounds": "[0,0][1320,2120]",
+                                    "visible": "true",
+                                    "focused": "false",
+                                    "enabled": "true",
+                                    "clickable": "false",
+                                    "hostWindowId": "1281",
+                                    "displayId": "0",
+                                    "opacity": "1.000000",
+                                    "zIndex": "0"
+                                  },
+                                  "children": [
+                                    {
+                                      "attributes": {
+                                        "type": "Stack",
+                                        "bounds": "[0,117][1320,2120]",
+                                        "origBounds": "[0,0][1320,2120]",
+                                        "visible": "true",
+                                        "focused": "false",
+                                        "enabled": "true",
+                                        "clickable": "false",
+                                        "hostWindowId": "1281",
+                                        "displayId": "0",
+                                        "opacity": "1.000000",
+                                        "zIndex": "0"
+                                      },
+                                      "children": [
+                                        {
+                                          "attributes": {
+                                            "type": "Stack",
+                                            "bounds": "[0,117][1320,2120]",
+                                            "origBounds": "[0,0][1320,2120]",
+                                            "visible": "true",
+                                            "focused": "false",
+                                            "enabled": "true",
+                                            "clickable": "false",
+                                            "hostWindowId": "1281",
+                                            "displayId": "0",
+                                            "opacity": "1.000000",
+                                            "zIndex": "0"
+                                          },
+                                          "children": [
+                                            {
+                                              "attributes": {
+                                                "type": "Stack",
+                                                "bounds": "[0,117][1320,2120]",
+                                                "origBounds": "[0,0][1320,2120]",
+                                                "visible": "true",
+                                                "focused": "false",
+                                                "enabled": "true",
+                                                "clickable": "false",
+                                                "hostWindowId": "1281",
+                                                "displayId": "0",
+                                                "opacity": "1.000000",
+                                                "zIndex": "0"
+                                              },
+                                              "children": [
+                                                {
+                                                  "attributes": {
+                                                    "type": "Image",
+                                                    "bounds": "[0,117][1320,2120]",
+                                                    "origBounds": "[0,0][1320,2120]",
+                                                    "visible": "true",
+                                                    "focused": "false",
+                                                    "enabled": "true",
+                                                    "clickable": "false",
+                                                    "hostWindowId": "1281",
+                                                    "displayId": "0",
+                                                    "opacity": "1.000000",
+                                                    "zIndex": "0"
+                                                  },
+                                                  "children": []
+                                                },
+                                                {
+                                                  "attributes": {
+                                                    "type": "Column",
+                                                    "bounds": "[0,117][1320,2120]",
+                                                    "origBounds": "[0,0][1320,2120]",
+                                                    "visible": "true",
+                                                    "focused": "false",
+                                                    "enabled": "true",
+                                                    "clickable": "false",
+                                                    "hostWindowId": "1281",
+                                                    "displayId": "0",
+                                                    "opacity": "1.000000",
+                                                    "zIndex": "0"
+                                                  },
+                                                  "children": []
+                                                },
+                                                {
+                                                  "attributes": {
+                                                    "type": "Row",
+                                                    "bounds": "[0,117][1320,2120]",
+                                                    "origBounds": "[0,0][1320,2120]",
+                                                    "visible": "true",
+                                                    "focused": "false",
+                                                    "enabled": "true",
+                                                    "clickable": "false",
+                                                    "hostWindowId": "1281",
+                                                    "displayId": "0",
+                                                    "opacity": "1.000000",
+                                                    "zIndex": "0"
+                                                  },
+                                                  "children": [
+                                                    {
+                                                      "attributes": {
+                                                        "type": "Image",
+                                                        "bounds": "[64,117][1257,2120]",
+                                                        "origBounds": "[64,0][1257,2120]",
+                                                        "visible": "true",
+                                                        "focused": "false",
+                                                        "enabled": "true",
+                                                        "clickable": "false",
+                                                        "hostWindowId": "1281",
+                                                        "displayId": "0",
+                                                        "opacity": "1.000000",
+                                                        "zIndex": "0"
+                                                      },
+                                                      "children": []
+                                                    }
+                                                  ]
+                                                }
+                                              ]
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "attributes": {
+                                            "type": "Column",
+                                            "bounds": "[0,117][1320,2120]",
+                                            "origBounds": "[0,0][1320,2120]",
+                                            "visible": "true",
+                                            "focused": "false",
+                                            "enabled": "true",
+                                            "clickable": "false",
+                                            "hostWindowId": "1281",
+                                            "displayId": "0",
+                                            "opacity": "1.000000",
+                                            "zIndex": "0"
+                                          },
+                                          "children": [
+                                            {
+                                              "attributes": {
+                                                "type": "Stack",
+                                                "bounds": "[0,117][1320,2120]",
+                                                "origBounds": "[0,0][1320,2120]",
+                                                "visible": "true",
+                                                "focused": "false",
+                                                "enabled": "true",
+                                                "clickable": "false",
+                                                "hostWindowId": "1281",
+                                                "displayId": "0",
+                                                "opacity": "1.000000",
+                                                "zIndex": "0"
+                                              },
+                                              "children": [
+                                                {
+                                                  "attributes": {
+                                                    "type": "Stack",
+                                                    "bounds": "[0,848][1320,2120]",
+                                                    "origBounds": "[0,848][1320,2120]",
+                                                    "visible": "true",
+                                                    "focused": "false",
+                                                    "enabled": "true",
+                                                    "clickable": "false",
+                                                    "hostWindowId": "1281",
+                                                    "displayId": "0",
+                                                    "opacity": "1.000000",
+                                                    "zIndex": "0"
+                                                  },
+                                                  "children": [
+                                                    {
+                                                      "attributes": {
+                                                        "type": "Text",
+                                                        "bounds": "[233,1652][1088,1826]",
+                                                        "origBounds": "[233,1652][1088,1826]",
+                                                        "visible": "true",
+                                                        "focused": "false",
+                                                        "enabled": "true",
+                                                        "clickable": "true",
+                                                        "hostWindowId": "1281",
+                                                        "displayId": "0",
+                                                        "opacity": "1.000000",
+                                                        "zIndex": "0"
+                                                      },
+                                                      "children": []
+                                                    },
+                                                    {
+                                                      "attributes": {
+                                                        "type": "Column",
+                                                        "bounds": "[618,1868][702,1976]",
+                                                        "origBounds": "[618,1868][702,1976]",
+                                                        "visible": "true",
+                                                        "focused": "false",
+                                                        "enabled": "true",
+                                                        "clickable": "false",
+                                                        "hostWindowId": "1281",
+                                                        "displayId": "0",
+                                                        "opacity": "1.000000",
+                                                        "zIndex": "0"
+                                                      },
+                                                      "children": [
+                                                        {
+                                                          "attributes": {
+                                                            "type": "Canvas",
+                                                            "bounds": "[618,1868][702,1976]",
+                                                            "origBounds": "[618,1868][702,1976]",
+                                                            "visible": "true",
+                                                            "focused": "false",
+                                                            "enabled": "true",
+                                                            "clickable": "false",
+                                                            "hostWindowId": "1281",
+                                                            "displayId": "0",
+                                                            "opacity": "1.000000",
+                                                            "zIndex": "0"
+                                                          },
+                                                          "children": []
+                                                        }
+                                                      ]
+                                                    }
+                                                  ]
+                                                }
+                                              ]
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "attributes": {
+                                    "type": "Flex",
+                                    "bounds": "[0,144][1320,231]",
+                                    "origBounds": "[0,144][1320,231]",
+                                    "visible": "true",
+                                    "focused": "false",
+                                    "enabled": "true",
+                                    "clickable": "false",
+                                    "hostWindowId": "1281",
+                                    "displayId": "0",
+                                    "opacity": "1.000000",
+                                    "zIndex": "0"
+                                  },
+                                  "children": [
+                                    {
+                                      "attributes": {
+                                        "type": "Image",
+                                        "bounds": "[48,146][354,230]",
+                                        "origBounds": "[48,146][354,230]",
+                                        "visible": "true",
+                                        "focused": "false",
+                                        "enabled": "true",
+                                        "clickable": "false",
+                                        "hostWindowId": "1281",
+                                        "displayId": "0",
+                                        "opacity": "1.000000",
+                                        "zIndex": "0"
+                                      },
+                                      "children": []
+                                    },
+                                    {
+                                      "attributes": {
+                                        "type": "Text",
+                                        "bounds": "[1044,144][1272,231]",
+                                        "origBounds": "[1044,144][1272,231]",
+                                        "visible": "true",
+                                        "focused": "false",
+                                        "enabled": "true",
+                                        "clickable": "true",
+                                        "hostWindowId": "1281",
+                                        "displayId": "0",
+                                        "opacity": "1.000000",
+                                        "zIndex": "0",
+                                        "text": "跳过广告",
+                                        "originalText": "跳过广告"
+                                      },
+                                      "children": []
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

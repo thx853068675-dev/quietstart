@@ -1,0 +1,248 @@
+[
+  {
+    "id": "12620583",
+    "variant": "original",
+    "classification": "insufficient-data",
+    "reason": "目标识别：候选「跳过」缺少 enabled 状态，无法确认可点击",
+    "missing": {
+      "enabled": 14,
+      "visible": 0,
+      "clickable": 0
+    },
+    "expectedTargetNodeId": 8,
+    "assumptions": [
+      "Synthetic full-screen focused root for offline replay only; node states are not inferred."
+    ]
+  },
+  {
+    "id": "12620583",
+    "variant": "enabled-assumed",
+    "classification": "miss",
+    "reason": "点击位置与其他控件重叠：目标「跳过」中心 (943, 159) 可能被覆盖，取消点击",
+    "missing": {
+      "enabled": 0,
+      "visible": 0,
+      "clickable": 0
+    },
+    "expectedTargetNodeId": 8,
+    "assumptions": [
+      "Synthetic full-screen focused root for offline replay only; node states are not inferred."
+    ]
+  },
+  {
+    "id": "12621953",
+    "variant": "original",
+    "classification": "insufficient-data",
+    "reason": "目标识别：候选「跳过」缺少 enabled 状态，无法确认可点击",
+    "missing": {
+      "enabled": 16,
+      "visible": 0,
+      "clickable": 0
+    },
+    "expectedTargetNodeId": 10,
+    "assumptions": [
+      "Synthetic full-screen focused root for offline replay only; node states are not inferred."
+    ]
+  },
+  {
+    "id": "12621953",
+    "variant": "enabled-assumed",
+    "classification": "miss",
+    "reason": "点击位置与其他控件重叠：目标「跳过」中心 (1070, 183) 可能被覆盖，取消点击",
+    "missing": {
+      "enabled": 0,
+      "visible": 0,
+      "clickable": 0
+    },
+    "expectedTargetNodeId": 10,
+    "assumptions": [
+      "Synthetic full-screen focused root for offline replay only; node states are not inferred."
+    ]
+  },
+  {
+    "id": "13842826",
+    "variant": "original",
+    "classification": "insufficient-data",
+    "reason": "目标识别：已读取 39 个可见控件；跳过/关闭文字、无障碍描述及图标标识均未匹配。图片内文字或未开放的控件可能无法读取，不能据此判定没有广告",
+    "missing": {
+      "enabled": 41,
+      "visible": 0,
+      "clickable": 0
+    },
+    "expectedTargetNodeId": 38,
+    "assumptions": [
+      "Synthetic full-screen focused root for offline replay only; node states are not inferred."
+    ]
+  },
+  {
+    "id": "13842826",
+    "variant": "enabled-assumed",
+    "classification": "miss",
+    "reason": "目标识别：已读取 39 个可见控件；跳过/关闭文字、无障碍描述及图标标识均未匹配。图片内文字或未开放的控件可能无法读取，不能据此判定没有广告",
+    "missing": {
+      "enabled": 0,
+      "visible": 0,
+      "clickable": 0
+    },
+    "expectedTargetNodeId": 38,
+    "assumptions": [
+      "Synthetic full-screen focused root for offline replay only; node states are not inferred."
+    ]
+  },
+  {
+    "id": "13939089",
+    "variant": "original",
+    "classification": "insufficient-data",
+    "reason": "目标识别：已读取 30 个可见控件；跳过/关闭文字、无障碍描述及图标标识均未匹配。图片内文字或未开放的控件可能无法读取，不能据此判定没有广告",
+    "missing": {
+      "enabled": 31,
+      "visible": 0,
+      "clickable": 0
+    },
+    "expectedTargetNodeId": 28,
+    "assumptions": [
+      "Synthetic full-screen focused root for offline replay only; node states are not inferred."
+    ]
+  },
+  {
+    "id": "13939089",
+    "variant": "enabled-assumed",
+    "classification": "miss",
+    "reason": "目标识别：已读取 30 个可见控件；跳过/关闭文字、无障碍描述及图标标识均未匹配。图片内文字或未开放的控件可能无法读取，不能据此判定没有广告",
+    "missing": {
+      "enabled": 0,
+      "visible": 0,
+      "clickable": 0
+    },
+    "expectedTargetNodeId": 28,
+    "assumptions": [
+      "Synthetic full-screen focused root for offline replay only; node states are not inferred."
+    ]
+  },
+  {
+    "id": "12775918",
+    "variant": "original",
+    "classification": "insufficient-data",
+    "reason": "目标识别：候选「跳过」缺少 enabled 状态，无法确认可点击",
+    "missing": {
+      "enabled": 35,
+      "visible": 0,
+      "clickable": 0
+    },
+    "expectedTargetNodeId": 29,
+    "assumptions": [
+      "Synthetic full-screen focused root for offline replay only; node states are not inferred."
+    ]
+  },
+  {
+    "id": "12775918",
+    "variant": "enabled-assumed",
+    "classification": "correct-target",
+    "reason": "已识别广告关闭目标及其依据",
+    "missing": {
+      "enabled": 0,
+      "visible": 0,
+      "clickable": 0
+    },
+    "expectedTargetNodeId": 29,
+    "actualBounds": {
+      "left": 44,
+      "top": 44,
+      "right": 132,
+      "bottom": 132
+    },
+    "assumptions": [
+      "Synthetic full-screen focused root for offline replay only; node states are not inferred."
+    ]
+  },
+  {
+    "id": "12775919",
+    "variant": "original",
+    "classification": "insufficient-data",
+    "reason": "目标识别：已读取 42 个可见控件；跳过/关闭文字、无障碍描述及图标标识均未匹配。图片内文字或未开放的控件可能无法读取，不能据此判定没有广告",
+    "missing": {
+      "enabled": 42,
+      "visible": 0,
+      "clickable": 0
+    },
+    "expectedTargetNodeId": 27,
+    "assumptions": [
+      "Synthetic full-screen focused root for offline replay only; node states are not inferred."
+    ]
+  },
+  {
+    "id": "12775919",
+    "variant": "enabled-assumed",
+    "classification": "miss",
+    "reason": "目标识别：已读取 42 个可见控件；跳过/关闭文字、无障碍描述及图标标识均未匹配。图片内文字或未开放的控件可能无法读取，不能据此判定没有广告",
+    "missing": {
+      "enabled": 0,
+      "visible": 0,
+      "clickable": 0
+    },
+    "expectedTargetNodeId": 27,
+    "assumptions": [
+      "Synthetic full-screen focused root for offline replay only; node states are not inferred."
+    ]
+  },
+  {
+    "id": "13468987",
+    "variant": "original",
+    "classification": "insufficient-data",
+    "reason": "目标识别：候选「跳过」缺少 enabled 状态，无法确认可点击",
+    "missing": {
+      "enabled": 17,
+      "visible": 0,
+      "clickable": 0
+    },
+    "expectedTargetNodeId": 8,
+    "assumptions": [
+      "Synthetic full-screen focused root for offline replay only; node states are not inferred."
+    ]
+  },
+  {
+    "id": "13468987",
+    "variant": "enabled-assumed",
+    "classification": "miss",
+    "reason": "点击核对：候选「跳过」本身不可点击，也没有尺寸合适的可点击父容器",
+    "missing": {
+      "enabled": 0,
+      "visible": 0,
+      "clickable": 0
+    },
+    "expectedTargetNodeId": 8,
+    "assumptions": [
+      "Synthetic full-screen focused root for offline replay only; node states are not inferred."
+    ]
+  },
+  {
+    "id": "13538616",
+    "variant": "original",
+    "classification": "insufficient-data",
+    "reason": "目标识别：候选「跳过图标」缺少 enabled 状态，无法确认可点击",
+    "missing": {
+      "enabled": 12,
+      "visible": 0,
+      "clickable": 0
+    },
+    "expectedTargetNodeId": 10,
+    "assumptions": [
+      "Synthetic full-screen focused root for offline replay only; node states are not inferred."
+    ]
+  },
+  {
+    "id": "13538616",
+    "variant": "enabled-assumed",
+    "classification": "miss",
+    "reason": "点击核对：候选「跳过图标」本身不可点击，也没有尺寸合适的可点击父容器",
+    "missing": {
+      "enabled": 0,
+      "visible": 0,
+      "clickable": 0
+    },
+    "expectedTargetNodeId": 10,
+    "assumptions": [
+      "Synthetic full-screen focused root for offline replay only; node states are not inferred."
+    ]
+  }
+]

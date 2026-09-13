@@ -1,0 +1,9 @@
+{
+  "id": "13160866",
+  "url": "https://github.com/user-attachments/files/13160866/file.zip",
+  "ruleSource": "https://github.com/ganlinte/GKD-subscription/blob/main/src/apps/com.qiyi.video.ts",
+  "group": "开屏广告",
+  "sha256": "279ba216d53610e8f6273e3b9bb209fb40a08847b370322dd5b1c9f4ea422037",
+  "expectedTargetNodeId": 254,
+  "annotation": "Parent of the visible 关闭 label, matching upstream @LinearLayout > [text=\"关闭\"]. Android reference, not HarmonyOS device evidence."
+}

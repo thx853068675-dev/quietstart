@@ -1,0 +1,11 @@
+{
+  "app": {
+    "bundleName": "com.tonghongxiang.quietstart",
+    "vendor": "tonghongxiang",
+    "versionCode": 94200,
+    "versionName": "0.9.42",
+    "buildVersion": "1",
+    "icon": "$media:quiet_icon",
+    "label": "$string:app_name"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "id": "13842826",
+  "url": "https://github.com/user-attachments/files/13842826/file.zip",
+  "ruleSource": "https://github.com/ganlinte/GKD-subscription/blob/main/src/apps/info.muge.appshare.ts",
+  "group": "开屏广告",
+  "sha256": "d69382c4d5ec7577dd46328de39f8aca39505d994fd76c6e3d22c2b2ccdbaec1",
+  "expectedTargetNodeId": 38,
+  "kind": "anonymous-splash-view",
+  "annotation": "Target independently selected from the upstream selector and snapshot tree; raw enabled remains absent. No HarmonyOS success claim."
+}

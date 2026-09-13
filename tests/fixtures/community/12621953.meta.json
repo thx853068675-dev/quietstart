@@ -1,0 +1,10 @@
+{
+  "id": "12621953",
+  "url": "https://github.com/user-attachments/files/12621953/file.zip",
+  "ruleSource": "https://github.com/ganlinte/GKD-subscription/blob/main/src/apps/com.dongqiudi.news.ts",
+  "group": "开屏广告",
+  "sha256": "1471af467b9e3b28420d0e047030fa4291f329be01a67585df637e177919843c",
+  "expectedTargetNodeId": 10,
+  "kind": "overlapping-label-image",
+  "annotation": "Target independently selected from the upstream selector and snapshot tree; raw enabled remains absent. No HarmonyOS success claim."
+}

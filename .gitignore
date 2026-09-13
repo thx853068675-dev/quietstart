@@ -1,0 +1,37 @@
+/node_modules
+/oh_modules
+/local.properties
+/.idea
+**/build
+/.hvigor
+.cxx
+/.clangd
+/.clang-format
+/.clang-tidy
+**/.test
+/.appanalyzer
+# Local device signing configuration; use the example for clean checkouts.
+/build-profile.json5
+*.p12
+*.p7b
+*.cer
+
+# Generated distribution and private material
+/dist/
+*.hap
+*.app
+*.pem
+*.key
+*.keystore
+*.jks
+*.pfx
+*.csr
+.env
+.env.*
+.DS_Store
+**/__pycache__/
+# Public source includes reviewed metadata, not upstream raw snapshots
+/tests/fixtures/community/[0-9]*.json
+!/tests/fixtures/community/*.meta.json
+# Generated during the single-package build (contains a signed worker digest)
+/entry/src/main/resources/rawfile/quietstart-worker.json

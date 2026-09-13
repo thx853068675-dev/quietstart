@@ -1,0 +1,10 @@
+{
+  "id": "12775919",
+  "url": "https://github.com/user-attachments/files/12775919/file.zip",
+  "ruleSource": "https://github.com/ganlinte/GKD-subscription/blob/main/src/apps/com.ksf.yyx.ts",
+  "group": "开屏广告",
+  "sha256": "1cc3ddcf8341050b41ea7bc1426259c8d56cef7343ec109048ea66d090576b6c",
+  "expectedTargetNodeId": 27,
+  "kind": "timer-separator-image",
+  "annotation": "Target independently selected from the upstream selector and snapshot tree; raw enabled remains absent. No HarmonyOS success claim."
+}
