@@ -8,14 +8,14 @@ HarmonyOS 原生开屏广告辅助工具。在本机识别广告按钮、学习�
 
 **只安装一个轻启主 HAP。UiTest 工作模块已内置，首次本机连接时由轻启自行安装，不需要手动导入第二个包。**
 
-1. 准备覆盖自己手机的调试签名包；已有完整主 HAP 可用[自动重签脚本](docs/RESIGN.md)，也可从源码构建。
-2. 通过电脑和官方 hdc 侧载主 HAP。
+1. 在 [Release](https://github.com/thx853068675-dev/quietstart/releases/tag/v0.9.43) 下载对应电脑的整合 ZIP，内含小白调试助手修改版和轻启 HAP。
+2. 打开整合版，登录自己的华为账号、连接手机，点“选择内置轻启”，再点“开始调试”。内外模块会自动一起重签、安装，不需要 DevEco、SDK、Java 或脚本。
 3. 按手机向导开启无线调试、填写端口并允许授权，等待显示“在线”。
 4. 正常打开其他应用，在轻启中确认并启用新规则。
 
-**从零开始请看 [侧载安装指南](docs/INSTALL.md)**，含签名、macOS / Windows 安装命令、本机激活和排错。安装后的规则管理见 [使用说明](docs/USAGE.md)。
+**整合包操作见 [开始使用](integrations/xiaobai/USAGE.md)**。自行编译或使用官方工具的步骤见 [侧载安装指南](docs/INSTALL.md)；已有签名材料仍可用 [重签脚本](docs/RESIGN.md)。安装后的规则管理见 [使用说明](docs/USAGE.md)。
 
-使用 Mac 版小白调试助手签名后，可按[小白配套重签步骤](docs/RESIGN.md#使用-mac-版小白的签名材料)自动补齐内置模块签名。小白官方[最新下载](https://github.com/likuai2010/auto-installer/releases/latest)；当前适配 3.1.0。
+整合版由轻启维护者修改小白源码构建，**不是小白官方版**。提供 Mac Apple 芯片和 Windows x64 包；请保留完整目录。小白官方项目与下载见 [auto-installer](https://github.com/likuai2010/auto-installer)，修改和第三方权利见 [整合说明](integrations/xiaobai/THIRD-PARTY.md)。
 
 首次构建和 USB 安装需要电脑；本机激活成功后不需要电脑持续连接。调试包的签名必须授权目标设备，不能把个人调试包当作所有人通用的安装包。自动重签包已完成真机全新侧载和本机激活验证。AGC 主包能安装，但其内置工作模块安装被系统拒绝，当前 AGC 链路不可用。
 

@@ -1,0 +1,62 @@
+name: XiaoBai integrated bundles
+on:
+  pull_request:
+    paths: ['integrations/xiaobai/**', '.github/workflows/xiaobai-bundles.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+env:
+  PYTHONUTF8: '1'
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15
+            platform: macos
+            label: macOS-arm64
+          - os: windows-2022
+            platform: windows
+            label: Windows-x64
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: likuai2010/auto-installer
+          ref: 24388dd86e6c3c7cab83fc27d3e6f4f9cb1b7801
+          path: upstream-xiaobai
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.29.3
+          channel: stable
+          cache: true
+      - name: Fetch pinned HAP and apply integration
+        shell: bash
+        run: |
+          python integrations/xiaobai/fetch_hap.py
+          python integrations/xiaobai/prepare.py --source upstream-xiaobai --hap quietstart.hap
+      - name: Test signing pipeline
+        working-directory: integrations/xiaobai/core
+        env:
+          QUIETSTART_TEST_HAP: ${{ github.workspace }}/quietstart.hap
+        run: |
+          dart pub get
+          dart analyze
+          dart test
+      - name: Resolve application dependencies
+        working-directory: upstream-xiaobai/flutter/hap_installer
+        run: flutter pub get
+      - name: Build modified assistant
+        working-directory: upstream-xiaobai/flutter/hap_installer
+        run: flutter build ${{ matrix.platform }} --release
+      - name: Package app, HAP and instructions together
+        run: python integrations/xiaobai/package.py --source upstream-xiaobai --hap quietstart.hap --platform ${{ matrix.label }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: quietstart-0.9.43-${{ matrix.label }}-bundle
+          path: release-bundles/*.zip
+          if-no-files-found: error
+          retention-days: 14
