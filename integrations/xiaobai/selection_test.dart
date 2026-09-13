@@ -4,6 +4,7 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hap_installer/EcoViewModel.dart';
+import 'package:hap_installer/hdc/CmdService.dart';
 import 'package:quietstart_signing/quietstart_signing.dart' as q;
 
 void main() {
@@ -62,6 +63,9 @@ void main() {
         await model.selectQuietStartFile(context, selectedPath: future.path);
         expect(model.hapInfo!.version, '1.2.3（123000）');
         expect(model.quietStartFileName, 'another-name.hap');
+        final profileModule = await cmd.readModuleInfo(model.debugPath);
+        expect(profileModule.app!.versionName, '1.2.3');
+        expect(profileModule.app!.bundleName, q.bundleName);
         expect(await File(oldSnapshot).exists(), isFalse);
 
         main['app']['versionCode'] = 1;

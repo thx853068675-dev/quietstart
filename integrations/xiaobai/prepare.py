@@ -110,6 +110,9 @@ def main():
       quietStartSelectionDirectory = await Directory.systemTemp.createTemp('quietstart-selection-');
       final snapshot = File(path.join(quietStartSelectionDirectory!.path, path.basename(filePath)));
       await snapshot.writeAsBytes(selected.bytes, flush: true);
+      await File(path.join(quietStartSelectionDirectory!.path, 'module.json'))
+          .writeAsBytes(package.files['module.json']!, flush: true);
+      debugPath = quietStartSelectionDirectory!.path;
       final app = package.main['app'];
       final version = app['versionName'] as String?;
       hapInfo = HapInfo(
@@ -155,6 +158,8 @@ def main():
     replace(page, 'model.toSelectFile(context);', 'model.selectQuietStartFile(context);')
     replace(page, 'const Text("选择")', 'Text(model.hapInfo == null ? "选择 HAP" : "更换版本")')
     replace(page, 'model.openFile(context, file.path!);', 'model.selectQuietStartFile(context, selectedPath: file.path!);')
+    replace(page, 'viewmodel.openFile(context!, url);', 'viewmodel.selectQuietStartFile(context!, selectedPath: url);')
+    replace(page, 'viewmodel.openFile(context!, call.arguments["path"]);', 'viewmodel.selectQuietStartFile(context!, selectedPath: call.arguments["path"]);')
     drop = app/'lib/widget/FileDropArea.dart'
     replace(drop, 'setState(() async {', 'setState(() {')
     print('Applied QuietStart integration to', app)
