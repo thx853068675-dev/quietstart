@@ -24,11 +24,16 @@ test('source export includes install guide and excludes submission, signing, gen
     fs.writeFileSync(path.join(dir, f), 'fixture');
   }
   fs.symlinkSync(path.join(dir, 'docs/INSTALL.md'), path.join(dir, 'entry/link.md'));
+  fs.mkdirSync(path.join(dir, 'docs/images'));
+  fs.writeFileSync(path.join(dir, 'docs/images/overview.jpeg'), 'reviewed screenshot fixture');
+  fs.writeFileSync(path.join(dir, 'docs/images/private.jpeg'), 'unreviewed screenshot fixture');
   assert.equal(run().status, 0);
   const archive = path.join(dir, 'dist/quietstart-source-1.0.zip');
   const listed = spawnSync('python3', ['-c', 'import sys,zipfile; print("\\n".join(zipfile.ZipFile(sys.argv[1]).namelist()))', archive], { encoding: 'utf8' });
   assert.equal(listed.status, 0);
   assert.match(listed.stdout, /docs\/INSTALL.md/);
+  assert.match(listed.stdout, /docs\/images\/overview.jpeg/);
+  assert.doesNotMatch(listed.stdout, /private.jpeg/);
   assert.doesNotMatch(listed.stdout, /agc-description|build-profile.json5|worker.hap|quietstart-worker.json|link.md/);
 });
 test('source export scans HTML for signing credentials', t => {

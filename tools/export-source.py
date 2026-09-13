@@ -6,6 +6,7 @@ DIRS={'AppScope','entry','hvigor','rules','scripts','tests','tools','docs'}
 PUBLIC_DOCS={'ARCHITECTURE.md','BUILD.md','INSTALL.md','RELEASING.md','TESTING.md','USAGE.md',
              'share-to-users-guide.md','single-package-0.9.42.md','community-learning-0.9.40.md',
              'community-structural-before-0.9.40.json','community-structural-results-0.9.40.json'}
+PUBLIC_SCREENSHOTS={'overview.jpeg','connection.jpeg','apps.jpeg','rules.jpeg','records.jpeg','settings.jpeg','preferences.jpeg'}
 BLOCK={'build','oh_modules','node_modules','.hvigor','.idea','__pycache__','.git','dist','.cxx','.preview','.test'}
 EXT={'.hap','.app','.pem','.key','.p12','.p7b','.cer','.csr','.jks','.keystore','.pyc','.zip','.log','.pfx'}
 selected=[]
@@ -15,7 +16,10 @@ for p in sorted(ROOT.rglob('*')):
     if any(x in BLOCK for x in rel.parts) or p.suffix in EXT or p.name in {'local.properties','.DS_Store','quietstart-worker.json'} or p.name.startswith('.env'):continue
     if len(rel.parts)==1 and p.name not in TOP:continue
     if len(rel.parts)>1 and rel.parts[0] not in DIRS:continue
-    if rel.parts[0]=='docs' and (len(rel.parts)!=2 or p.name not in PUBLIC_DOCS):continue
+    if rel.parts[0]=='docs':
+        public_doc=len(rel.parts)==2 and p.name in PUBLIC_DOCS
+        public_image=len(rel.parts)==3 and rel.parts[1]=='images' and p.name in PUBLIC_SCREENSHOTS
+        if not (public_doc or public_image):continue
     if rel.parts[:3]==('tests','fixtures','community') and re.fullmatch(r'\d+\.json',p.name):continue
     raw=p.read_bytes()
     try:
