@@ -14,6 +14,7 @@ List<int> zip(Map<String, List<int>> files) {
   }
   return ZipEncoder().encode(archive)!;
 }
+
 List<int> jsonBytes(Object o) => utf8.encode(jsonEncode(o));
 Map<String, dynamic> module(String name, {String bundle = bundleName}) => {
       'app': {'bundleName': bundle, 'versionCode': 94300, 'minAPIVersion': 24},
@@ -73,6 +74,17 @@ List<int> syntheticSignature(List<int> unsigned, List<int> profile) {
 }
 
 void main() {
+  test('real signed HAP alignment padding and nested payload are supported',
+      () {
+    final source = Platform.environment['QUIETSTART_TEST_HAP'];
+    if (source == null) return;
+    final bytes = File(source).readAsBytesSync();
+    final package = QuietStartPackage.inspect(bytes)!;
+    expect(package.main['app']['versionCode'], 94300);
+    expect(signedProfile(bytes), isNotEmpty);
+    expect(signedProfile(package.files[workerPath]!), isNotEmpty);
+    checkPayload(bytes, repack(bytes, {}));
+  });
   final profile = List<int>.filled(128, 8);
   late Directory temp;
   setUp(() async {

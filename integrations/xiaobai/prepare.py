@@ -11,10 +11,10 @@ HAP_SHA = '242cd4c309333e7aa1b00ded05c89056671348034f293cf20b198b4493d5f03c'
 HERE = Path(__file__).resolve().parent
 
 def replace(file, old, new):
-    text = file.read_text()
+    text = file.read_text(encoding='utf-8')
     if text.count(old) != 1:
         raise ValueError(f'Upstream changed; refusing ambiguous patch: {file.name}')
-    file.write_text(text.replace(old, new))
+    file.write_text(text.replace(old, new), encoding='utf-8')
 
 def main():
     parser = argparse.ArgumentParser()

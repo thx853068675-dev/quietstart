@@ -14,9 +14,68 @@ const maxBytes = 64 * 1024 * 1024;
 typedef SignFile = Future<void> Function(File input, File output, int minimum);
 typedef SignProgress = void Function(String message);
 
+// Huawei uses zero-filled alignment padding as ZIP extra bytes. archive 3.x
+// interprets even a trailing one-byte pad as a structured field and crashes.
+// Normalize only the in-memory central-directory view used for decoding;
+// signing/Profile checks always use the original bytes.
+List<int> zipView(List<int> bytes) {
+  if (bytes.length > maxBytes || bytes.length < 22) {
+    throw const FormatException('无效的安装包长度');
+  }
+  final data = ByteData.sublistView(Uint8List.fromList(bytes));
+  var end = -1;
+  for (var i = bytes.length - 22; i >= 0 && i >= bytes.length - 65557; i--) {
+    if (data.getUint32(i, Endian.little) == 0x06054b50 &&
+        i + 22 + data.getUint16(i + 20, Endian.little) == bytes.length) {
+      end = i;
+      break;
+    }
+  }
+  if (end < 0 || data.getUint32(end + 4, Endian.little) != 0) {
+    throw const FormatException('不支持的 ZIP 结构');
+  }
+  final count = data.getUint16(end + 10, Endian.little);
+  final cd = data.getUint32(end + 16, Endian.little);
+  if (count > 4096 ||
+      count != data.getUint16(end + 8, Endian.little) ||
+      cd + data.getUint32(end + 12, Endian.little) != end) {
+    throw const FormatException('安装包中央目录无效');
+  }
+  final directory = BytesBuilder(copy: false);
+  var position = cd, total = 0;
+  for (var i = 0; i < count; i++) {
+    if (position + 46 > end ||
+        data.getUint32(position, Endian.little) != 0x02014b50) {
+      throw const FormatException('安装包目录截断');
+    }
+    final name = data.getUint16(position + 28, Endian.little);
+    final extra = data.getUint16(position + 30, Endian.little);
+    final comment = data.getUint16(position + 32, Endian.little);
+    final next = position + 46 + name + extra + comment;
+    total += data.getUint32(position + 24, Endian.little);
+    if (next > end ||
+        total > maxBytes ||
+        data.getUint16(position + 8, Endian.little) & 1 != 0 ||
+        data.getUint32(position + 42, Endian.little) >= cd ||
+        data.getUint32(position + 20, Endian.little) == 0xffffffff) {
+      throw const FormatException('安装包过大、加密或目录越界');
+    }
+    final header =
+        Uint8List.fromList(bytes.sublist(position, position + 46 + name));
+    ByteData.sublistView(header).setUint16(30, 0, Endian.little);
+    directory.add(header);
+    directory.add(bytes.sublist(next - comment, next));
+    position = next;
+  }
+  if (position != end) throw const FormatException('安装包目录数量不符');
+  final tail = Uint8List.fromList(bytes.sublist(end));
+  ByteData.sublistView(tail).setUint32(12, directory.length, Endian.little);
+  return [...bytes.take(cd), ...directory.takeBytes(), ...tail];
+}
+
 Map<String, List<int>> readHap(List<int> bytes) {
   if (bytes.length > maxBytes) throw const FormatException('安装包过大');
-  final archive = ZipDecoder().decodeBytes(bytes, verify: true);
+  final archive = ZipDecoder().decodeBytes(zipView(bytes), verify: true);
   final result = <String, List<int>>{};
   var total = 0;
   if (archive.length > 4096) throw const FormatException('安装包文件过多');
@@ -88,7 +147,7 @@ class QuietStartPackage {
 }
 
 List<int> repack(List<int> original, Map<String, List<int>> replacements) {
-  final input = ZipDecoder().decodeBytes(original, verify: true);
+  final input = ZipDecoder().decodeBytes(zipView(original), verify: true);
   final output = Archive();
   for (final entry in input) {
     final bytes = replacements[entry.name];

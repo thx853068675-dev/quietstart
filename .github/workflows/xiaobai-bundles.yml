@@ -5,6 +5,8 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+env:
+  PYTHONUTF8: '1'
 jobs:
   build:
     strategy:
@@ -37,6 +39,8 @@ jobs:
           python integrations/xiaobai/prepare.py --source upstream-xiaobai --hap quietstart.hap
       - name: Test signing pipeline
         working-directory: integrations/xiaobai/core
+        env:
+          QUIETSTART_TEST_HAP: ${{ github.workspace }}/quietstart.hap
         run: |
           dart pub get
           dart analyze
