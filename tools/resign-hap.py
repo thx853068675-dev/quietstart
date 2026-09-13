@@ -124,7 +124,7 @@ def resign(source, output, signer):
         signer.verify(original_worker, work, 'input-worker')
         unsigned_worker, signed_worker = work / 'worker-unsigned.hap', work / 'worker-signed.hap'
         repack(worker, unsigned_worker)
-        print('2/5 重签内置模块，请按官方工具提示输入密码', flush=True)
+        print('2/5 重签内置模块', flush=True)
         signer.sign(unsigned_worker, signed_worker, module['app']['minAPIVersion'])
         signer.verify(signed_worker, work, 'worker')
         new_worker = signed_worker.read_bytes()
@@ -134,7 +134,7 @@ def resign(source, output, signer):
         unsigned_main, signed_main = work / 'main-unsigned.hap', work / 'main-signed.hap'
         print('3/5 自动更新摘要、大小并回填主包', flush=True)
         repack(original, unsigned_main, replacements)
-        print('4/5 重签主包，请再次按官方工具提示输入密码', flush=True)
+        print('4/5 重签主包', flush=True)
         signer.sign(unsigned_main, signed_main, main['app']['minAPIVersion'])
         print('5/5 验证签名、内外一致性及程序内容', flush=True)
         signer.verify(signed_main, work, 'main')

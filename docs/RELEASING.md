@@ -9,7 +9,7 @@ python3 tools/run-tests.py
 python3 tools/export-source.py
 ```
 
-输出 `dist/quietstart-source-0.9.42.zip`。导出器只选择项目源码、构建工具、测试及公开文档，排除本机签名配置、证书、私钥、设备产物、缓存、原始社区快照和 AGC 提审材料。发现疑似凭据或个人绝对路径时停止导出。
+输出 `dist/quietstart-source-0.9.43.zip`。导出器只选择项目源码、构建工具、测试及公开文档，排除本机签名配置、证书、私钥、设备产物、缓存、原始社区快照和 AGC 提审材料。发现疑似凭据或个人绝对路径时停止导出。
 
 ## 检查后发布
 

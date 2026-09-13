@@ -2645,3 +2645,30 @@ test('community timer-image structure learns pending then clicks and verifies it
  const status=await f.run(4);assert.equal(status.clickCount,1);assert.equal(status.observedDismissedCount,1);
  assert.equal(f.state.clickCalls[0].id,'');
 });
+
+test('nonclickable semantic target learns pending and approved rule survives transient ids without fresh ad evidence', async () => {
+ const f = learningFixture({ apiVersion: 26, configure(state) {
+  const target = state.nodes[0];
+  target.id = '977152'; target.text = '跳过5'; target.type = 'Text';
+  const parent = { ...target, id: '338117', text: '', type: 'Row', clickable: false,
+   bounds: { left: 1080, top: 80, right: 1240, bottom: 180 } };
+  target.parent = parent;
+  state.nodes.push(parent);
+ }, onLayout(layout) {
+  // The gesture handler exists, but accessibility reports false, as in the real snapshot.
+  const visit = node => {
+   if (node.attributes.type === 'Text') node.attributes.clickable = 'false';
+   (node.children || []).forEach(visit);
+  };
+  visit(layout);
+ } });
+ const rule = await observeAndApprove(f);
+ assert.equal(rule.recognition, 'semantic');
+ assert.equal(rule.targetId, '');
+ assert.equal(f.models.validRule(rule), true);
+ f.state.nodes[0].id = '988000'; f.state.nodes[0].text = '跳过';
+ const status = await f.run(4);
+ assert.equal(status.clickCount, 1);
+ assert.equal(status.observedDismissedCount, 1);
+ assert.equal(f.learningStore.readRules().length, 1);
+});

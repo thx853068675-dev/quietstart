@@ -182,7 +182,9 @@ export function validRule(rule: LearnedRule): boolean {
   if ([rule.buttonType, rule.labelType].some((value: string) => value !== undefined &&
     (typeof value !== 'string' || value.length > 80))) { return false; }
   if (rule.progressStyle !== undefined && !['', 'ring', 'linear'].includes(rule.progressStyle)) { return false; }
-  if (rule.recognition !== undefined && !['', 'direct', 'parent', 'close-countdown'].includes(rule.recognition)) { return false; }
+  if (rule.recognition !== undefined && !['', 'direct', 'parent', 'close-countdown', 'semantic'].includes(rule.recognition)) { return false; }
+  if (rule.recognition === 'semantic' && (!['text', 'description'].includes(rule.labelSource) ||
+    !['跳过', '跳过广告', 'skip', 'skipad', '关闭', '关闭广告'].includes(rule.label))) { return false; }
   if (rule.marker === 'close-countdown' && !['关闭', '×', '关闭图标'].includes(rule.label)) { return false; }
   if (rule.marker === 'label' && !explicitAdAction(rule.label)) { return false; }
   if (rule.labelSource === 'id' && (controlIdLabel(rule.targetId) !== rule.label || !rule.targetId)) { return false; }

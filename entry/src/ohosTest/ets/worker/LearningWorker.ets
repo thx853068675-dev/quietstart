@@ -590,6 +590,36 @@ function excludedContext(target: DiscoveryNode, nodes: DiscoveryNode[], window: 
   });
 }
 
+// Some SDK gesture handlers omit clickable. Admit only a compact semantic
+// label island; discovery still requires separate ad/countdown evidence below.
+function semanticTouchTarget(node: DiscoveryNode, nodes: DiscoveryNode[], window: Rect,
+  source: string, label: string): boolean {
+  if (!['text', 'description'].includes(source) ||
+    !['跳过', '跳过广告', 'skip', 'skipad', '关闭', '关闭广告'].includes(label) ||
+    node.a.clickable !== 'false' || node.a.enabled !== 'true' ||
+    !['Text', 'Button', 'Row', 'android.widget.TextView', 'android.widget.Button'].includes(node.a.type ?? '')) { return false; }
+  for (let item: DiscoveryNode | undefined = node; item; item = item.parent) {
+    if (item.a.enabled === 'false' || ['HitTestMode.None', 'HitTestMode.Block'].includes(item.a.hitTestBehavior ?? '')) { return false; }
+  }
+  const parent = node.parent;
+  if (!parent || parent.a.clickable !== 'false' || parent.a.enabled !== 'true' ||
+    !['Row', 'Column', 'Stack', 'Flex', 'RelativeContainer', 'Button', 'android.widget.FrameLayout', 'android.widget.LinearLayout', 'android.view.ViewGroup'].includes(parent.a.type ?? '') ||
+    !isSplashButton(parent.box, window) || !covers(parent.box, node.box)) { return false; }
+  const children = nodes.filter((other: DiscoveryNode) => other.parent === parent);
+  if (children.length < 1 || children.length > 4) { return false; }
+  return children.every((other: DiscoveryNode) => other === node ||
+    (other.a.clickable === 'false' && other.a.enabled !== 'false' &&
+    (!other.a.text || isCountdownText(other.a.text)) &&
+    (!other.a.description || isCountdownText(other.a.description)) &&
+    ['Text', 'Progress', 'LoadingProgress'].includes(other.a.type ?? '')));
+}
+function snapshotTargetId(node: DiscoveryNode, semantic: boolean): string {
+  const id = node.a.id ?? '';
+  // Generated numeric IDs change at every launch. Semantics, type and live
+  // geometry remain mandatory; named developer IDs are still matched exactly.
+  return semantic && /^\d+$/.test(id) ? '' : id;
+}
+
 // None excludes this node's own hit test, not its descendants. Transparent
 // still receives touches, so it must not be treated as an inert background.
 function receivesTouch(node: DiscoveryNode): boolean {
@@ -762,6 +792,8 @@ export function discoverSnapshot(text: string, bundle: string, report: ScanRepor
         }
       }
     }
+    const semantic = !target && semanticTouchTarget(node, nodes, window, source, label);
+    if (semantic) { target = node; }
     if (!target || !covers(target.box, node.box)) { report.reason = '点击核对：候选「' + label + '」本身不可点击，也没有尺寸合适的可点击父容器'; continue; }
     if (excludedContext(target, nodes, window)) {
       report.reason = '场景排除：目标所在容器包含登录、授权、教程或视频操作，未学习'; continue;
@@ -770,8 +802,8 @@ export function discoverSnapshot(text: string, bundle: string, report: ScanRepor
     // layout are deliberately excluded from this match; all input guards remain below.
     const button = target;
     const learnedButton = approvedRules.find((saved: LearnedRule) => saved.bundle === bundle &&
-      saved.label === label && (saved.labelSource || 'text') === source && saved.targetId === (button.a.id ?? '') &&
-      (!saved.recognition || saved.recognition === 'close-countdown' || saved.recognition === (button === node ? 'direct' : 'parent')) &&
+      saved.label === label && (saved.labelSource || 'text') === source && saved.targetId === snapshotTargetId(button, semantic) &&
+      (!saved.recognition || saved.recognition === 'close-countdown' || saved.recognition === (semantic ? 'semantic' : (button === node ? 'direct' : 'parent'))) &&
       (!saved.buttonType || saved.buttonType === button.a.type) && (!saved.labelType || saved.labelType === node.a.type) &&
       Math.abs(saved.aspect - width / height) < 0.08 &&
       Math.abs(saved.left - (button.box.left - window.left) / width) <= 0.015 &&
@@ -798,6 +830,9 @@ export function discoverSnapshot(text: string, bundle: string, report: ScanRepor
       evidence = 'close-countdown';
     }
     if (!evidence && adControlId(target.a.id)) { evidence = 'control-id'; }
+    if (semantic && !learnedButton && !targetMarker && !['countdown', 'close-countdown'].includes(evidence)) {
+      report.reason = '语义按钮未报告点击能力：还需要独立的广告标记或倒计时依据'; continue;
+    }
     if (!evidence) {
       if (regions.length && !report.imageRegions.length) { report.imageRegions = regions; }
       report.reason = '找到候选「' + label + '」，但缺少广告或倒计时依据（未读取到有效信息）；未生成新规则。文字或图形倒计时任一可确认即可；当前未读取到可确认的倒计时信息';
@@ -820,7 +855,7 @@ export function discoverSnapshot(text: string, bundle: string, report: ScanRepor
       centerX >= other.box.left && centerX <= other.box.right && centerY >= other.box.top && centerY <= other.box.bottom)) {
       report.reason = '点击位置与其他控件重叠：目标「' + label + '」中心 (' + Math.round(centerX) + ', ' + Math.round(centerY) + ') 可能被覆盖，取消点击'; return undefined;
     }
-    const targetId = target.a.id ?? '';
+    const targetId = snapshotTargetId(target, semantic);
     // IDs are often shared by an SDK's unrelated controls. Uniqueness is
     // established by live semantics + ancestry + ad evidence + hit geometry,
     // not by counting an ID across the whole page. The selectedTarget check
@@ -831,7 +866,7 @@ export function discoverSnapshot(text: string, bundle: string, report: ScanRepor
     }
     const rule = new LearnedRule();
     rule.bundle = bundle; rule.targetId = targetId; rule.label = label; rule.marker = evidence; rule.labelSource = source;
-    rule.recognition = evidence === 'close-countdown' ? 'close-countdown' : (target !== node ? 'parent' : 'direct');
+    rule.recognition = semantic ? 'semantic' : evidence === 'close-countdown' ? 'close-countdown' : (target !== node ? 'parent' : 'direct');
     rule.structureKind = kind;
     rule.buttonType = target.a.type ?? ''; rule.labelType = node.a.type ?? '';
     const progress = relatedGraphicalCountdown(target, nodes, window);

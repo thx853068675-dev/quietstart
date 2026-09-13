@@ -25,7 +25,7 @@ python3 tools/resign-hap.py
 
 按照提示填写主 HAP、输出文件、证书、Profile、密钥库的路径和别名。macOS 默认安装位置的 DevEco 工具会自动找到；找不到时会询问 Java 和 `hap-sign-tool.jar` 的路径。文件路径可以带空格。
 
-接着按官方工具的提示输入密码：先询问密钥密码 `KeyPwd`、再询问密钥库密码 `KeystorePwd`；内包、外包各一次，共四次提示。若两种密码相同，分别输入同一密码。工具提示的输入时限为 30 秒。
+接着按官方工具的提示输入密码：根据提示字段输入密钥库密码 `KeystorePwd` 或密钥密码 `KeyPwd`；本次 SDK 26 实测先询问 `KeystorePwd`，再询问 `KeyPwd`，内包、外包各一次，共四次提示。若两种密码相同，分别输入同一密码。工具提示的输入时限为 30 秒。
 
 脚本不会读取或保存密码，也不会把密码放进命令参数。DevEco 配置中的加密密码不能当作明文输入。如果不知道自动生成密钥的密码，可以继续使用 IDE 的[源码签名构建流程](INSTALL.md#3-从源码生成自己的安装包)。
 
@@ -52,6 +52,26 @@ python3 tools/resign-hap.py --input input.hap --output resign-work/quietstart-si
 ```
 
 每次使用新的输出文件名；脚本不会覆盖原包或已有输出。JSON 不支持密码字段。默认算法适用于本次的 EC 密钥，其他密钥须在配置中选用匹配算法。
+
+## 使用 Mac 版小白的签名材料
+
+如果小白已经能签名并安装轻启主包，可以用 [resign-xiaobai-macos.py](../tools/resign-xiaobai-macos.py) 补齐内置模块签名。它需要与 `resign-hap.py` 放在同一个目录，电脑安装标准路径的 DevEco Studio / SDK 和 Python 3。
+
+小白官方下载：[最新版本](https://github.com/likuai2010/auto-installer/releases/latest) · [Mac 3.1.0 下载](https://github.com/likuai2010/auto-installer/releases/download/3.1.0/hap_installer-Mac-3.1.0.zip)。截至 2026-09-13 官方最新版本为 3.1.0，其更新说明明确支持“已签名 hap 直接安装”。本配套脚本目前仅适配 Mac 版。
+
+输入必须是**小白已经签名的完整轻启 HAP**。Mac 3.1.0 本次实测缓存位置为 `~/Library/Caches/hap_installer/<设备号>/com_tonghongxiang_quietstart/`。选择同一次证书重置之后生成的 `*_signed.hap`：
+
+```sh
+python3 tools/resign-xiaobai-macos.py --input "/小白缓存路径/quietstart_signed.hap" --output "/新的输出路径/quietstart-complete.hap"
+```
+
+脚本读取 `~/Documents/hap_installer/signConfig.json` 指向的本地 PEM 私钥，从已签名 HAP 提取证书和原始 Profile，确认私钥匹配后重签内外模块、更新摘要。不会重新申请、修改或扩大 Profile 授权，不读取小白账号登录信息。
+
+这个适配入口无需手动输入密码：它用本机 PEM 私钥生成临时 PKCS12，随机密码只在进程内使用，通过终端管道回答官方工具提示，完成后清理临时文件。不会修改小白原来的密钥和设置。当前只适配本次 Mac 3.1.0 保存的未加密 PEM 格式；私钥不匹配或格式不支持时停止。
+
+最终仍只安装一个输出 HAP：可用小白 3.1.0 的已签名包直接安装功能，或按本页安装章节用 HDC 安装。轻启首次连接时自行安装工作模块。不要再切换另一套证书重签外包；小白每次重置证书后，需要重新运行完整流程。
+
+验证边界：2026-09-13 已用本机小白实际输出的 0.9.42 包完成内外重签，官方签名校验、证书链一致、Profile 字节一致、内置摘要和程序内容检查通过；该小白适配产物尚未完成手机端工作模块自安装验证。
 
 ## 自动执行了什么
 
