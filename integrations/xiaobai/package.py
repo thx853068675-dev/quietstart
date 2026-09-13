@@ -35,8 +35,9 @@ with tempfile.TemporaryDirectory(prefix='quietstart-bundle-') as temporary:
     shutil.copyfile(args.hap, root/'quietstart-0.9.43.hap')
     shutil.copyfile(HERE/'USAGE.md', root/'开始使用.md')
     shutil.copyfile(HERE/'THIRD-PARTY.md', root/'第三方说明.md')
-    (root/'BUILD.txt').write_text(f'XiaoBai source: {UPSTREAM}\nPlatform: {args.platform}\nQuietStart HAP SHA256: {HAP_SHA}\n')
-    (root/'SHA256SUMS.txt').write_text(f'{HAP_SHA}  quietstart-0.9.43.hap\n')
+    revision = subprocess.check_output(['git', '-C', str(HERE), 'rev-parse', 'HEAD'], text=True).strip()
+    (root/'BUILD.txt').write_text(f'XiaoBai source: {UPSTREAM}\nIntegration source: {revision}\nPlatform: {args.platform}\nQuietStart HAP SHA256: {HAP_SHA}\n', encoding='utf-8')
+    (root/'SHA256SUMS.txt').write_text(f'{HAP_SHA}  quietstart-0.9.43.hap\n', encoding='utf-8')
     target = destination/(name+'.zip')
     if args.platform == 'macOS-arm64':
         subprocess.run(['ditto', '-c', '-k', '--sequesterRsrc', '--keepParent', str(root), str(target)], check=True)

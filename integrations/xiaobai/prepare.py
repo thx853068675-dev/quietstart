@@ -39,13 +39,34 @@ def main():
     replace(app/'pubspec.yaml', '\ndependencies:\n', '\ndependencies:\n  quietstart_signing:\n    path: packages/quietstart_signing\n')
     replace(app/'pubspec.yaml', '    - assets/store/\n', '    - assets/quietstart/\n    - assets/store/\n')
     service = app/'lib/hdc/CmdService.dart'
-    replace(service, "import 'dart:convert';", "import 'dart:convert';\nimport 'QuietStartAdapter.dart';")
+    replace(service, "import 'dart:convert';", "import 'dart:convert';\nimport 'package:flutter/services.dart';\nimport 'QuietStartAdapter.dart';")
+    replace(service, '  Future<String> getOutPath(String inPath) async {', '''  Future<String> getQuietStartSignerDir() async {
+    final directory = Directory(path.join(await getTempDir(), 'quietstart-integrated-signer'));
+    await directory.create(recursive: true);
+    final platform = Platform.isWindows ? 'windows' : 'macos';
+    final files = Platform.isWindows
+      ? ['signer.exe', 'libcrypto-3-x64.dll', 'libgcc_s_seh-1.dll',
+          'libstdc++-6.dll', 'libwinpthread-1.dll', 'libcjson.dll']
+      : ['signer'];
+    for (final name in files) {
+      final data = await rootBundle.load('assets/$platform/$name');
+      final file = File(path.join(directory.path, name));
+      await file.writeAsBytes(data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes), flush: true);
+    }
+    if (!Platform.isWindows) {
+      final result = await Process.run('chmod', ['700', path.join(directory.path, 'signer')]);
+      if (result.exitCode != 0) throw const FormatException('签名器无法启动');
+    }
+    return directory.path;
+  }
+
+  Future<String> getOutPath(String inPath) async {''')
     replace(service, 'Future<String?> signHap(String inPath, SignConfig signConfig) async {',
             'Future<String?> signHap(String inPath, SignConfig signConfig, {void Function(String)? onProgress}) async {')
     replace(service, '    final outPath = await getOutPath(inPath);\n    var cmd = "";', '''    final outPath = await getOutPath(inPath);
     if (Platform.isMacOS || Platform.isWindows) {
       try {
-        if (await signQuietStart(inPath, outPath, signConfig, await getHdcDir(),
+        if (await signQuietStart(inPath, outPath, signConfig, await getQuietStartSignerDir(),
             onProgress ?? (_) {})) return null;
       } on FormatException catch (e) {
         return e.message;

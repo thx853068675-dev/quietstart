@@ -32,10 +32,11 @@ jobs:
         with:
           flutter-version: 3.29.3
           channel: stable
+          cache: true
       - name: Fetch pinned HAP and apply integration
         shell: bash
         run: |
-          curl --fail --location --retry 3 https://github.com/thx853068675-dev/quietstart/releases/download/v0.9.43/quietstart-0.9.43-precompiled.hap -o quietstart.hap
+          python integrations/xiaobai/fetch_hap.py
           python integrations/xiaobai/prepare.py --source upstream-xiaobai --hap quietstart.hap
       - name: Test signing pipeline
         working-directory: integrations/xiaobai/core

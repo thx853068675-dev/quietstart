@@ -160,6 +160,7 @@ List<int> repack(List<int> original, Map<String, List<int>> replacements) {
     } else {
       output.addFile(ArchiveFile(entry.name, bytes.length, bytes)
         ..mode = entry.mode
+        ..compress = entry.compress
         ..lastModTime = entry.lastModTime);
     }
   }
