@@ -20,7 +20,7 @@ function exporter(t) {
 }
 test('source export includes install guide and excludes submission, signing, generated worker and symlinks', t => {
   const { dir, run } = exporter(t);
-  for (const f of ['docs/INSTALL.md', 'docs/agc-description-draft.md', 'build-profile.json5', 'entry/worker.hap', 'entry/quietstart-worker.json']) {
+  for (const f of ['docs/INSTALL.md', 'docs/RESIGN.md', 'docs/agc-description-draft.md', 'build-profile.json5', 'entry/worker.hap', 'entry/quietstart-worker.json']) {
     fs.writeFileSync(path.join(dir, f), 'fixture');
   }
   fs.symlinkSync(path.join(dir, 'docs/INSTALL.md'), path.join(dir, 'entry/link.md'));
@@ -32,6 +32,7 @@ test('source export includes install guide and excludes submission, signing, gen
   const listed = spawnSync('python3', ['-c', 'import sys,zipfile; print("\\n".join(zipfile.ZipFile(sys.argv[1]).namelist()))', archive], { encoding: 'utf8' });
   assert.equal(listed.status, 0);
   assert.match(listed.stdout, /docs\/INSTALL.md/);
+  assert.match(listed.stdout, /docs\/RESIGN.md/);
   assert.match(listed.stdout, /docs\/images\/overview.jpeg/);
   assert.doesNotMatch(listed.stdout, /private.jpeg/);
   assert.doesNotMatch(listed.stdout, /agc-description|build-profile.json5|worker.hap|quietstart-worker.json|link.md/);
