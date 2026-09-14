@@ -57,15 +57,17 @@ function engine() {
     vm.runInNewContext(code,{exports,require(name){if (!(name in deps)) throw Error('Unexpected import '+name); return deps[name];}}, {filename});
     return exports;
   }
-  const store=load('entry/src/main/ets/core/LearningStore.ets',{'@kit.CoreFileKit':{fileIo:{}},'@kit.BasicServicesKit':{}});
+  const profile=load('entry/src/main/ets/core/RecognitionProfile.ets',{});
+  const store=load('entry/src/main/ets/core/LearningStore.ets',{'./RecognitionProfile':profile,'@kit.CoreFileKit':{fileIo:{}},'@kit.BasicServicesKit':{}});
   const rules=load('entry/src/ohosTest/ets/worker/Rules.ets',{'../../../main/ets/core/LearningStore':store});
   const pack=load('entry/src/main/ets/core/RulePack.ets',{});
   const builtin=load('entry/src/main/ets/core/BuiltinRulePack.ets',{'./RulePack':pack});
   const snapshot=load('entry/src/ohosTest/ets/worker/SnapshotLayout.ets',{'@kit.TestKit':{},'../../../main/ets/core/LearningStore':store});
   const structural=load('entry/src/ohosTest/ets/worker/StructuralExperience.ets',{'@kit.TestKit':{},'../../../main/ets/core/LearningStore':store,'./Rules':rules});
-  const worker=load('entry/src/ohosTest/ets/worker/LearningWorker.ets',{'@kit.TestKit':{},'./SnapshotLayout':snapshot,'./StructuralExperience':structural,
+  const capture=load('entry/src/ohosTest/ets/worker/ProfileCapture.ets',{'./StructuralExperience':structural,'../../../main/ets/core/RecognitionProfile':profile,'../../../main/ets/core/LearningStore':store});
+  const worker=load('entry/src/ohosTest/ets/worker/LearningWorker.ets',{'@kit.TestKit':{},'./ProfileCapture':capture,'./SnapshotLayout':snapshot,'./StructuralExperience':structural,
     '../../../main/ets/core/LearningStore':store,'./Rules':rules,'../../../main/ets/core/RulePack':pack});
-  return {worker,pack:builtin.builtinRulePack()};
+  return {worker,profile,capture,store,pack:builtin.builtinRulePack()};
 }
 function read(id) {
   const dir=path.join(ROOT,'tests/fixtures/community');

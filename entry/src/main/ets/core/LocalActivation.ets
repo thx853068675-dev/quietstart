@@ -2,17 +2,21 @@ import { socket } from '@kit.NetworkKit';
 import { cryptoFramework } from '@kit.CryptoArchitectureKit';
 import { util } from '@kit.ArkTS';
 import { fileIo as fs } from '@kit.CoreFileKit';
-import { BusinessError } from '@kit.BasicServicesKit';
+import { BusinessError, osAccount } from '@kit.BasicServicesKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { DebugStore, isDebugOnline } from './DebugStore';
 import { LocalStore } from './LocalStore';
+import { SupervisionStore } from './SupervisionStore';
+import { SystemExitStore } from './SystemExitStore';
+import { SUPERVISOR_PROGRAM, supervisorCommand } from './SupervisorProgram';
 import { bytesField, HdcDecoder, HdcField, hdcFrame, HdcPacket, hdcTlvValue, joinBytes, localDebugPort, numberField, readFields } from './HdcProtocol';
 
 export interface WorkerShell {
   execute(command: string): Promise<string>;
+  installWorker(hash: string): Promise<void>;
 }
 
-export type PrepareWorker = (shell: WorkerShell, progress: (message: string) => void) => Promise<void>;
+export type PrepareWorker = (shell: WorkerShell, progress: (message: string) => void) => Promise<boolean | void>;
 
 export class ActivationState {
   phase: string = 'connecting';
@@ -23,6 +27,8 @@ export class ActivationState {
   success: boolean = false;
   message: string = '';
   commandOutput: string = '';
+  installHash: string = '';
+  installToken: string = '';
 }
 
 class LocalIdentity {
@@ -76,11 +82,12 @@ export class LocalActivation implements WorkerShell {
         if (isDebugOnline(status) && status.startedAt >= state.startedAt) {
           state.success = true;
           state.finishedAt = Date.now();
-          state.message = '本机激活成功，已验证新会话心跳。调试连接已关闭。';
+          state.message = '本机激活成功，已验证会话心跳和接口响应。调试连接已关闭。';
           this.write('local-activation.json', JSON.stringify(state));
-        } else if (Date.now() - (state.commandAt || state.startedAt) > (state.commandAt ? 35000 : (state.phase === 'installing' ? 180000 : 95000))) {
+        } else if (Date.now() - (state.commandAt || state.startedAt) > (state.installToken ? 90000 : state.commandAt ? 35000 : (state.phase === 'installing' ? 180000 : 95000))) {
           state.finishedAt = Date.now();
-          state.message = '上次激活未收到新会话心跳，请检查无线调试后重试。';
+          state.phase = 'error';
+          state.message = state.installToken ? '未能恢复工作模块安装结果，请重新连接；已完成的安装会先核验，不重复覆盖。' : '上次激活未收到新会话心跳，请检查无线调试后重试。';
           this.write('local-activation.json', JSON.stringify(state));
         }
       }
@@ -260,13 +267,40 @@ export class LocalActivation implements WorkerShell {
     return result;
   }
 
+  async installWorker(hash: string): Promise<void> {
+    if (!/^[a-f0-9]{64}$/.test(hash) || this.closed || !this.authorized || !this.preparing || this.sent) {
+      throw new Error('工作模块安装尚未就绪');
+    }
+    const target = '/data/local/tmp/quietstart-worker-' + hash.slice(0, 12);
+    this.state.installHash = hash; this.state.installToken = this.state.startedAt.toString();
+    new SupervisionStore(this.directory).stop();
+    new SystemExitStore(this.directory).markExpected('module-install');
+    this.state.commandAt = Date.now(); this.sent = true;
+    this.save('正在安装工作模块，完成后将自动返回并继续连接…');
+    // bm may kill this app even on a same-version replacement. The detached
+    // job owns its result and reopens the UI; a new HDC connection verifies it.
+    // bm can return zero on failure and loses its output when stdout is a
+    // regular file. Pipe it through cat, retaining timeout's status separately.
+    const body = 'sleep 1; rm -f ' + target + '/installed.sha256 ' + target + '/install.exit; ' +
+      '{ /bin/timeout 45 bm install -p ' + target + '/worker.hap; echo $? > ' + target + '/install.exit; } 2>&1 | cat > ' + target + '/install.log; ' +
+      'result=$(cat ' + target + '/install.exit); ' +
+      'if [ "$result" = 0 ] && grep -qi "install bundle successfully" ' + target + '/install.log && ' +
+      '! grep -qiE "fail|error" ' + target + '/install.log; then ' +
+      'echo ' + hash + ' > ' + target + '/installed.tmp; mv ' + target + '/installed.tmp ' + target + '/installed.sha256; fi; ' +
+      'rm -f ' + target + '/worker.b64 ' + target + '/worker.hap; ' +
+      'aa start -b com.tonghongxiang.quietstart -a EntryAbility --ps quietstartInstallResume ' + this.state.installToken;
+    await this.send(101, 1001, this.encoder.encodeInto('/bin/nohup /bin/setsid /bin/sh -c \' ' + body +
+      ' \' </dev/null > ' + target + '/job.log 2>&1 & echo QuietStartInstallScheduled; wait'));
+  }
+
   private async prepareAndLaunch(): Promise<void> {
     if (this.sent || this.preparing || this.closed) { return; }
     if (!this.labelBundle && this.prepare) {
       this.preparing = true; this.state.phase = 'installing';
       this.save('正在检查本机工作模块…');
-      await this.prepare(this, (message: string) => { this.save(message); });
+      const ready = await this.prepare(this, (message: string) => { this.save(message); });
       this.preparing = false;
+      if (ready === false) { return; }
     }
     if (!this.closed) { await this.launchWorker(); }
   }
@@ -279,21 +313,21 @@ export class LocalActivation implements WorkerShell {
       await this.send(101, 1001, this.encoder.encodeInto('bm dump -n ' + this.labelBundle + ' -l; echo __QuietStartLabelEnd__'));
       return;
     }
+    const account = await osAccount.getAccountManager().getOsAccountLocalId();
+    if (this.closed || this.sent) { return; }
     const store = new LocalStore(this.directory);
     const settings = store.readSettings();
     settings.stopRequested = false;
     store.saveSettings(settings);
+    new SystemExitStore(this.directory).markExpected('activation');
+    const token = this.state.startedAt.toString();
+    new SupervisionStore(this.directory).start(token);
+    new SupervisionStore(this.directory).setNotice('');
     this.sent = true;
     this.state.phase = 'starting';
     this.state.commandAt = Date.now();
     this.save('本机认证成功，轻启将重新打开并启动会话…');
-    // This detached task survives the restart of this app and its TCP socket.
-    // The fixed command accepts no user-controlled shell text.
-    const command = "/bin/nohup /bin/setsid /bin/sh -c 'echo QuietStartChildReady; sleep 2; " +
-      "aa force-stop com.tonghongxiang.quietstart; echo QuietStartOldProcessStopped; " +
-      "aa test -b com.tonghongxiang.quietstart -m entry_test -s unittest OpenHarmonyTestRunner -s mode skip -s seconds 0 -w 3; " +
-      "echo QuietStartCommandFinished' </dev/null & " +
-      'echo QuietStartLocalScheduled; wait';
+    const command = supervisorCommand(token, this.base64.encodeToStringSync(this.encoder.encodeInto(SUPERVISOR_PROGRAM)), account);
     await this.send(101, 1001, this.encoder.encodeInto(command));
   }
 
@@ -304,9 +338,9 @@ export class LocalActivation implements WorkerShell {
     if (isDebugOnline(status) && status.startedAt >= this.state.startedAt) {
       this.state.success = true;
       this.state.finishedAt = Date.now();
-      this.save('本机激活成功，已验证新会话心跳。调试连接已关闭。');
+      this.save('本机激活成功，已验证会话心跳和接口响应。调试连接已关闭。');
       this.close();
-    } else if (Date.now() - (this.state.commandAt || this.state.startedAt) > (this.sent ? 30000 : (this.preparing ? 180000 : 90000))) {
+    } else if (Date.now() - (this.state.commandAt || this.state.startedAt) > (this.state.installToken ? 90000 : this.sent ? 30000 : (this.preparing ? 180000 : 90000))) {
       this.fail(this.sent ? '未收到新会话心跳：' + this.state.commandOutput.slice(-500) : '等待授权超时，请确认无线调试和端口后重试。');
     }
   }

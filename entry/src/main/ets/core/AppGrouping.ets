@@ -9,6 +9,6 @@ export function appGroup(bundle: string, allowed: string[], ignored: string[], r
   const ownRules = rules.filter((rule: LearnedRule) => rule.bundle === bundle);
   if (automaticQuiet && ownRules.length === 0 && quietEntries.some((entry: AdFreeEntry) =>
     entry.bundle === bundle && entry.updatedAt <= now && entry.pausedUntil > now)) { return 2; }
-  if (allowed.includes(bundle) && ownRules.some((rule: LearnedRule) => ruleState(rule, decisions) === 'approved')) { return 0; }
+  if (ownRules.some((rule: LearnedRule) => (allowed.includes(bundle) || rule.autoApproved === true) && ruleState(rule, decisions) === 'approved')) { return 0; }
   return 1;
 }

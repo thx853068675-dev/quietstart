@@ -19,8 +19,8 @@ for(const [name,change] of [
  ['disabled',t=>{label(t).attributes.enabled='false';}],
  ['hidden',t=>{label(t).attributes.visible='false';}],
  ['missing clickable',t=>{delete label(t).attributes.clickable;}],
- ['no hit testing',t=>{label(t).attributes.hitTestBehavior='HitTestMode.None';}],
- ['parent no hit testing',t=>{parent(t,label(t)).attributes.hitTestBehavior='HitTestMode.None';}],
+ ['all no hit testing',t=>{label(t).attributes.hitTestBehavior='HitTestMode.None';parent(t,label(t)).attributes.hitTestBehavior='HitTestMode.None';}],
+
  ['large parent',t=>{parent(t,label(t)).attributes.bounds='[0,0][1320,2120]';}],
  ['purchase text',t=>{label(t).attributes.text='购买';}],
  ['foreign owner',t=>{label(t).attributes.bundleName='com.other.app';}],

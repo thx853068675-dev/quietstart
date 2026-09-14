@@ -6,7 +6,8 @@ const vm = require('node:vm');
 const ts = require('/Applications/DevEco-Studio.app/Contents/tools/hvigor/hvigor-ohos-plugin/node_modules/typescript');
 function fixture(options = {}) {
   const files = new Map(), calls = [];
-  const settings = { remindersEnabled: options.enabled === true, reminderDismissSeconds: options.seconds ?? 5 };
+  const settings = { remindersEnabled: options.enabled === true, reminderDismissSeconds: options.seconds ?? 5,
+    newRuleRemindersEnabled: options.learnedEnabled === true };
   let now = 100000;
   const fileIo = { OpenMode: { CREATE: 1, WRITE_ONLY: 2, TRUNC: 4 },
     readTextSync: p => { if (!files.has(p)) throw Error('missing'); return files.get(p); },
@@ -17,9 +18,10 @@ function fixture(options = {}) {
     '@kit.AbilityKit': { wantAgent: { OperationType: { START_ABILITY: 1 }, WantAgentFlags: { UPDATE_PRESENT_FLAG: 1 },
       getWantAgent: async request => {
         assert.equal(request.wants[0].bundleName, 'com.tonghongxiang.quietstart');
-        assert.equal(request.wants[0].parameters.quietstartOpenRecords, true);
+        const learned = request.requestCode === 70603;
+        assert.equal(request.wants[0].parameters[learned ? 'quietstartOpenRules' : 'quietstartOpenRecords'], true);
         if (options.onAction) await options.onAction(settings);
-        return { action: 'open-records' };
+        return { action: learned ? 'open-rules' : 'open-records' };
       } } },
     '@kit.NotificationKit': { notificationManager: {
       SlotType: { SERVICE_INFORMATION: 2 }, ContentType: { NOTIFICATION_CONTENT_BASIC_TEXT: 0 },
@@ -114,4 +116,19 @@ test('duration changes during publication eventually update the same notificatio
  const f=fixture({enabled:true,onPublish:async s=>{if(!changed){changed=true;s.reminderDismissSeconds=0;}}});
  await f.service.show('A');assert.equal(f.published().at(-1).autoDeletedTime,0);
  assert.match(f.published().at(-1).content.normal.title,/1 次/);
+});
+test('learned rule notifications use a separate fixed ID and never increment skip totals',async()=>{
+ const f=fixture({learnedEnabled:true,seconds:10});await f.service.showLearned('A',false);await f.service.showLearned('B',true);
+ assert.equal(f.published().length,2);assert.ok(f.published().every(r=>r.id===70603));
+ assert.equal(f.published()[0].wantAgent.action,'open-rules');assert.equal(f.published()[0].autoDeletedTime,110000);
+ assert.match(f.published()[0].content.normal.text,/等待确认/);assert.match(f.published()[1].content.normal.text,/已启用/);
+ assert.equal(f.files.has('/test/reminder-totals.json'),false);
+ assert.equal(f.published()[0].notificationFlags.soundEnabled,2);
+});
+test('learned notifications respect permission and disable before or during publication',async()=>{
+ for(const options of [{},{learnedEnabled:true,permission:false},{learnedEnabled:true,onAction:s=>{s.newRuleRemindersEnabled=false;}}]){
+  const f=fixture(options);await f.service.showLearned('A',true);assert.equal(f.published().length,0);
+ }
+ const f=fixture({learnedEnabled:true,onPublish:s=>{s.newRuleRemindersEnabled=false;}});await f.service.showLearned('A',true);
+ assert.deepEqual(f.calls.at(-1),['cancel',70603]);
 });

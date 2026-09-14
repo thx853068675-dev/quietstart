@@ -29,7 +29,14 @@ export class WorkerInstaller {
       item.moduleName === manifest.moduleName && item.versionCode === manifest.versionCode);
   }
 
-  async ensure(shell: WorkerShell, progress: (message: string) => void): Promise<void> {
+  private remember(hash: string): void {
+    const receipt = this.directory + '/installed-worker.sha256';
+    const file = fs.openSync(receipt + '.tmp', fs.OpenMode.CREATE | fs.OpenMode.WRITE_ONLY | fs.OpenMode.TRUNC);
+    try { fs.writeSync(file.fd, hash); } finally { fs.closeSync(file); }
+    fs.renameSync(receipt + '.tmp', receipt);
+  }
+
+  async ensure(shell: WorkerShell, progress: (message: string) => void, resumeHash: string = ''): Promise<boolean> {
     let manifest: WorkerManifest;
     try {
       manifest = JSON.parse(new util.TextDecoder('utf-8').decodeToString(
@@ -43,17 +50,29 @@ export class WorkerInstaller {
     const receipt = this.directory + '/installed-worker.sha256';
     let remembered = '';
     try { remembered = fs.readTextSync(receipt); } catch (_) {}
-    if (await this.installed(shell, manifest) && remembered === manifest.sha256) {
-      progress('工作模块已就绪，正在启动…'); return;
+    const target = '/data/local/tmp/quietstart-worker-' + manifest.sha256.slice(0, 12);
+    const installed = await this.installed(shell, manifest);
+    if (installed && remembered === manifest.sha256) {
+      progress('工作模块已就绪，正在启动…'); return true;
+    }
+    const completed = await shell.execute('cat ' + target + '/installed.sha256 2>/dev/null || true');
+    if (installed && completed.trim() === manifest.sha256) {
+      this.remember(manifest.sha256);
+      progress('已核验工作模块安装结果，继续连接…'); return true;
+    }
+    if (resumeHash) {
+      if (resumeHash !== manifest.sha256) { throw new Error('安装包已更新，请重新连接以准备对应的工作模块。'); }
+      const log = await shell.execute('tail -c 500 ' + target + '/install.log 2>/dev/null || true');
+      throw new Error('工作模块安装未完成：' + (log.trim() || '系统安装未返回成功结果，请重试连接。'));
     }
     const bytes = await this.resources.getRawFileContent('quietstart-worker.hap');
     const digest = cryptoFramework.createMd('SHA256'); await digest.update({ data: bytes });
     let hash = '';
     for (const byte of (await digest.digest()).data) { hash += byte.toString(16).padStart(2, '0'); }
     if (bytes.length !== manifest.size || hash !== manifest.sha256) { throw new Error('内置工作模块校验失败，未执行安装。'); }
-    const target = '/data/local/tmp/quietstart-worker-' + hash.slice(0, 12);
     // Stable private staging path permits retry after interruption; truncate before transfer.
     await shell.execute('umask 077; mkdir -p ' + target + ' && : > ' + target + '/worker.b64');
+    let handedOff = false;
     try {
       const encoded = new util.Base64Helper().encodeToStringSync(bytes);
       for (let i = 0; i < encoded.length; i += 16384) {
@@ -63,18 +82,13 @@ export class WorkerInstaller {
       await shell.execute('base64 -d ' + target + '/worker.b64 > ' + target + '/worker.hap');
       const checked = await shell.execute('sha256sum ' + target + '/worker.hap');
       if (checked.split(/\s+/)[0] !== hash) { throw new Error('工作模块传输不完整，请重新连接。'); }
-      progress('正在安装工作模块，请稍候…');
-      const output = await shell.execute('bm install -p ' + target + '/worker.hap');
-      if (!/install bundle successfully/i.test(output) || /fail|error/i.test(output)) {
-        throw new Error('工作模块安装失败：' + output.slice(-500));
-      }
-      if (!await this.installed(shell, manifest)) { throw new Error('系统未确认工作模块版本，请重新连接。'); }
-      const file = fs.openSync(receipt + '.tmp', fs.OpenMode.CREATE | fs.OpenMode.WRITE_ONLY | fs.OpenMode.TRUNC);
-      try { fs.writeSync(file.fd, hash); } finally { fs.closeSync(file); }
-      fs.renameSync(receipt + '.tmp', receipt);
-      progress('工作模块已安装，正在启动…');
+      handedOff = true;
+      await shell.installWorker(hash);
+      return false;
     } finally {
-      await shell.execute('rm -f ' + target + '/worker.b64 ' + target + '/worker.hap; rmdir ' + target).catch(() => {});
+      if (!handedOff) {
+        await shell.execute('rm -f ' + target + '/worker.b64 ' + target + '/worker.hap; rmdir ' + target).catch(() => {});
+      }
     }
   }
 }

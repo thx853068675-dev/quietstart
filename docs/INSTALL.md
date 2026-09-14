@@ -12,7 +12,7 @@
 
 需要一台支持开发者模式、USB 调试和无线调试的 HarmonyOS 手机、一台电脑、可传输数据的 USB 线，以及官方 DevEco Studio / HarmonyOS SDK 中的 hdc 工具。手机本机连接时需按系统要求连接 Wi-Fi。
 
-当前真机验证范围为 Pura X / HarmonyOS 7（API 26）。其他机型及系统版本请先验证无线调试是否可用。
+当前包最低要求 6.1.1（API 24），真机验证范围为 Pura X / HarmonyOS 7（API 26）。能安装不代表已验证全部功能或后台稳定性；OS 6 用户请核对完整系统版本与 API 级别，已知差异见[兼容性排查](LIFECYCLE.md#harmonyos-6-兼容性与后台被杀反馈)。
 
 | 你已有的文件 | 下一步 |
 | --- | --- |

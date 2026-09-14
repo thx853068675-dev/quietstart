@@ -1,7 +1,8 @@
-import { ExperienceNode as DiscoveryNode, structuralAction, overlayDismissTarget } from './StructuralExperience';
+import { ExperienceNode as DiscoveryNode, structuralAction, overlayDismissTarget, dismissImageTarget } from './StructuralExperience';
+import { captureProfile } from './ProfileCapture';
 import { SnapshotNode, snapshotBounds, imageLayoutSignature, normalizeSnapshotTrees, snapshotImage } from './SnapshotLayout';
 import { RecognitionPack, packLabel } from '../../../main/ets/core/RulePack';
-import { Component, Driver, MatchPattern, ON, On, Rect } from '@kit.TestKit';
+import { UIElementInfo, Component, Driver, MatchPattern, ON, On, Rect } from '@kit.TestKit';
 import { LearnedRule, LearningStore, ruleKey, skipLabel, hasSkipCountdown, isCountdownText, adLabel,
   explicitAdAction, controlIdLabel, adControlId, discoverableBundle } from '../../../main/ets/core/LearningStore';
 import { isSplashButton } from './Rules';
@@ -234,7 +235,7 @@ export async function learnedTargetState(driver: Driver, rule: LearnedRule, wind
       const label = adLabel(marker.source === 'text' ? await node.getText() : await node.getDescription());
       if (label && sameRegion(await node.getBounds(), marker.bounds, window)) { return 'blocked'; }
     }
-  } else if (!['label', 'countdown', 'close-countdown', 'control-id', 'structure'].includes(rule.marker)) {
+  } else if (!['manual', 'label', 'countdown', 'close-countdown', 'control-id', 'structure'].includes(rule.marker)) {
     // Missing evidence must not silently weaken verification for an old rule.
     return 'unknown';
   }
@@ -328,7 +329,8 @@ export function soleVisibleAppBundle(text: string): string {
 function splashAdId(value: string): boolean {
   if (typeof value !== 'string' || value.length > 200) { return false; }
   const words = value.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase().split(/[^a-z0-9]+/);
-  return words.includes('splash') && words.some((word: string) => ['ad', 'ads', 'advert', 'advertisement'].includes(word));
+  return (words.includes('splash') && words.some((word: string) => ['ad', 'ads', 'advert', 'advertisement'].includes(word))) ||
+    (words.includes('ad') && words.includes('content'));
 }
 
 // One dump is one coherent tree. No Component handles are retained or reread
@@ -378,6 +380,8 @@ export function snapshotTargetState(text: string, rule: LearnedRule, marker?: Ad
     const box = snapshotBounds(a.bounds);
     if (box && box.right > window.left && box.left < window.right && box.bottom > window.top && box.top < window.bottom) {
       liveNodes += 1;
+      if (rule.labelSource === 'manual' && a.type === rule.buttonType && sameRegion(box, reference, window) &&
+        manualText(manualActionText(node)) === manualText(rule.example)) { targetPresent = true; }
       if (rule.labelSource === 'structure' && a.type === rule.buttonType && sameRegion(box, reference, window)) { targetPresent = true; }
       if (rule.targetId && a.id === rule.targetId && sameRegion(box, reference, window)) { targetPresent = true; }
       const labels = [recognizedLabel(snapshotLabel(node), 'text', rule.bundle, pack),
@@ -398,7 +402,7 @@ export function snapshotTargetState(text: string, rule: LearnedRule, marker?: Ad
   if (invalid || liveNodes === 0) { return 'unknown'; }
   if (targetPresent) { return 'present'; }
   if (markerPresent) { return 'blocked'; }
-  if (ambiguous || (!marker && !['label', 'countdown', 'close-countdown', 'control-id', 'structure'].includes(rule.marker))) { return 'unknown'; }
+  if (ambiguous || (!marker && !['manual', 'label', 'countdown', 'close-countdown', 'control-id', 'structure'].includes(rule.marker))) { return 'unknown'; }
   return 'absent';
 }
 
@@ -499,10 +503,11 @@ function splashMarkerFor(target: DiscoveryNode, nodes: DiscoveryNode[], window: 
   if (!((target.box.right <= window.left + width * 0.35 || target.box.left >= window.left + width * 0.65) &&
     (target.box.bottom <= window.top + height * 0.2 || target.box.top >= window.top + height * 0.8))) { return undefined; }
   for (let layer: DiscoveryNode | undefined = target.parent; layer; layer = layer?.parent) {
-    if (layer.a.clickable !== 'true' || layer.a.enabled !== 'true' ||
+    if (layer.a.enabled !== 'true' ||
       layer.box.right - layer.box.left < width * 0.8 || layer.box.bottom - layer.box.top < height * 0.8) { continue; }
     for (const node of nodes) {
-      if (!splashAdId(node.a.id) || node.box.right <= node.box.left || node.box.bottom <= node.box.top ||
+      if (!splashAdId(node.a.id) || (layer.a.clickable !== 'true' &&
+        (!snapshotImage(node.a.type) || node.box.right - node.box.left < width * 0.8 || node.box.bottom - node.box.top < height * 0.6)) || node.box.right <= node.box.left || node.box.bottom <= node.box.top ||
         node.box.left < window.left || node.box.right > window.right ||
         node.box.top < window.top || node.box.bottom > window.bottom) { continue; }
       for (let parent = node.parent; parent; parent = parent.parent) {
@@ -513,8 +518,7 @@ function splashMarkerFor(target: DiscoveryNode, nodes: DiscoveryNode[], window: 
         }
       }
     }
-    // The nearest clickable splash surface is the evidence boundary.
-    return undefined;
+    // Continue through layout wrappers; only explicit ad content can establish evidence.
   }
   return undefined;
 }
@@ -593,25 +597,33 @@ function excludedContext(target: DiscoveryNode, nodes: DiscoveryNode[], window: 
 // Some SDK gesture handlers omit clickable. Admit only a compact semantic
 // label island; discovery still requires separate ad/countdown evidence below.
 function semanticTouchTarget(node: DiscoveryNode, nodes: DiscoveryNode[], window: Rect,
-  source: string, label: string): boolean {
+  source: string, label: string): DiscoveryNode | undefined {
   if (!['text', 'description'].includes(source) ||
     !['跳过', '跳过广告', 'skip', 'skipad', '关闭', '关闭广告'].includes(label) ||
-    node.a.clickable !== 'false' || node.a.enabled !== 'true' ||
-    !['Text', 'Button', 'Row', 'android.widget.TextView', 'android.widget.Button'].includes(node.a.type ?? '')) { return false; }
+    node.a.clickable !== 'false' || node.a.enabled !== 'true') { return undefined; }
   for (let item: DiscoveryNode | undefined = node; item; item = item.parent) {
-    if (item.a.enabled === 'false' || ['HitTestMode.None', 'HitTestMode.Block'].includes(item.a.hitTestBehavior ?? '')) { return false; }
+    if (item.a.enabled === 'false' || item.a.hitTestBehavior === 'HitTestMode.Block') { return undefined; }
   }
   const parent = node.parent;
   if (!parent || parent.a.clickable !== 'false' || parent.a.enabled !== 'true' ||
     !['Row', 'Column', 'Stack', 'Flex', 'RelativeContainer', 'Button', 'android.widget.FrameLayout', 'android.widget.LinearLayout', 'android.view.ViewGroup'].includes(parent.a.type ?? '') ||
-    !isSplashButton(parent.box, window) || !covers(parent.box, node.box)) { return false; }
-  const children = nodes.filter((other: DiscoveryNode) => other.parent === parent);
-  if (children.length < 1 || children.length > 4) { return false; }
-  return children.every((other: DiscoveryNode) => other === node ||
-    (other.a.clickable === 'false' && other.a.enabled !== 'false' &&
-    (!other.a.text || isCountdownText(other.a.text)) &&
-    (!other.a.description || isCountdownText(other.a.description)) &&
-    ['Text', 'Progress', 'LoadingProgress'].includes(other.a.type ?? '')));
+    !isSplashButton(parent.box, window) || !covers(parent.box, node.box)) { return undefined; }
+  const descendants = nodes.filter((other: DiscoveryNode) => {
+    for (let p = other.parent; p; p = p.parent) { if (p === parent) { return true; } }
+    return false;
+  });
+  // Decorative circle stacks and split bare seconds are confined to the same
+  // compact button. Neither becomes advertising evidence on its own.
+  if (descendants.length > 16 || !descendants.every((other: DiscoveryNode) => other === node ||
+    (other.a.clickable === 'false' && other.a.enabled !== 'false' && other.box.left >= parent.box.left && other.box.right <= parent.box.right &&
+      other.box.top >= parent.box.top && other.box.bottom <= parent.box.bottom &&
+      (!other.a.text || isCountdownText(other.a.text) || /^\d{1,2}$/.test(other.a.text.trim())) &&
+      (!other.a.description || isCountdownText(other.a.description)) &&
+      ['Text', 'Progress', 'LoadingProgress', 'Circle', 'Path', 'Stack', 'Row', 'Column', 'Blank'].includes(other.a.type ?? '')))) { return undefined; }
+  if (node.a.hitTestBehavior !== 'HitTestMode.None') { return node; }
+  // None applies to the text itself. A gesture on its compact parent can still
+  // handle the tap; never enlarge the target to the full-screen ad surface.
+  return parent.a.hitTestBehavior !== 'HitTestMode.None' ? parent : undefined;
 }
 function snapshotTargetId(node: DiscoveryNode, semantic: boolean): string {
   const id = node.a.id ?? '';
@@ -665,6 +677,10 @@ export function recognizedLabel(value: string, field: string, bundle: string, pa
 }
 
 export function discoverSnapshot(text: string, bundle: string, report: ScanReport, pack?: RecognitionPack, approvedRules: LearnedRule[] = [], selectedButtonOnly: boolean = false): SnapshotCandidate | undefined {
+  const manual = approvedRules.filter((r: LearnedRule) => r.origin === 'manual' && r.bundle === bundle)
+    .map((r: LearnedRule) => manualSnapshot(text, bundle, undefined, r)).filter((r: SnapshotCandidate | undefined) => !!r);
+  if (manual.length > 1) { report.reason = '多个手动规则匹配，等待明确目标'; return undefined; }
+  if (manual.length === 1) { report.reason = '已匹配手动确认的按钮'; return manual[0]; }
   report.reason = '界面读取：布局为空、格式无效或缺少前台窗口';
   if (!text) { report.reason = '界面读取：系统返回空布局，未进入按钮识别'; return undefined; }
   if (text.length > 8 * 1024 * 1024) { report.reason = '界面读取：布局超过 8 MB，停止解析以避免卡顿'; return undefined; }
@@ -792,9 +808,12 @@ export function discoverSnapshot(text: string, bundle: string, report: ScanRepor
         }
       }
     }
-    const semantic = !target && semanticTouchTarget(node, nodes, window, source, label);
-    if (semantic) { target = node; }
-    if (!target || !covers(target.box, node.box)) { report.reason = '点击核对：候选「' + label + '」本身不可点击，也没有尺寸合适的可点击父容器'; continue; }
+    const semanticTarget = !target ? semanticTouchTarget(node, nodes, window, source, label) : undefined;
+    const semantic = !!semanticTarget;
+    if (semanticTarget) { target = semanticTarget; }
+    if (!target || !covers(target.box, node.box)) {
+      if (report.collectTrace && !report.candidateTrace) { report.candidateTrace = candidateTrace(node, nodes, window); }
+      report.reason = '点击核对：候选「' + label + '」本身不可点击，也没有尺寸合适的可点击父容器'; continue; }
     if (excludedContext(target, nodes, window)) {
       report.reason = '场景排除：目标所在容器包含登录、授权、教程或视频操作，未学习'; continue;
     }
@@ -822,7 +841,8 @@ export function discoverSnapshot(text: string, bundle: string, report: ScanRepor
       if (hasSkipCountdown(raw) || relatedGraphicalCountdown(target, nodes, window) || nodes.some((other: DiscoveryNode) => {
         const gapX = Math.max(0, other.box.left - node.box.right, node.box.left - other.box.right);
         const gapY = Math.max(0, other.box.top - node.box.bottom, node.box.top - other.box.bottom);
-        return (isCountdownText(other.a.text) || isCountdownText(other.a.description)) &&
+        return (isCountdownText(other.a.text) || isCountdownText(other.a.description) ||
+          (other.parent === node.parent && !!node.parent && isSplashButton(node.parent.box, window) && /^\d{1,2}$/.test((other.a.text ?? '').trim()) && Number(other.a.text) <= 60)) &&
           isSplashButton(other.box, window) && gapX <= width * 0.06 && gapY <= height * 0.02;
       })) { evidence = 'countdown'; }
     }
@@ -839,9 +859,11 @@ export function discoverSnapshot(text: string, bundle: string, report: ScanRepor
       if (report.collectTrace && !report.candidateTrace) { report.candidateTrace = candidateTrace(target, nodes, window); }
       continue;
     }
-    const currentTarget = target;
-    const centerX = (target.box.left + target.box.right) / 2;
-    const centerY = (target.box.top + target.box.bottom) / 2;
+    const imageTarget = dismissImageTarget(target, nodes, window);
+    if (imageTarget === null) { report.reason = '图片关闭目标不可点击或存在多个图片，取消点击'; continue; }
+    const currentTarget = imageTarget ?? target;
+    const centerX = (currentTarget.box.left + currentTarget.box.right) / 2;
+    const centerY = (currentTarget.box.top + currentTarget.box.bottom) / 2;
     const related = (other: DiscoveryNode): boolean => {
       for (let item: DiscoveryNode | undefined = other; item; item = item.parent) {
         if (item === currentTarget) { return true; }
@@ -868,6 +890,9 @@ export function discoverSnapshot(text: string, bundle: string, report: ScanRepor
     rule.bundle = bundle; rule.targetId = targetId; rule.label = label; rule.marker = evidence; rule.labelSource = source;
     rule.recognition = semantic ? 'semantic' : evidence === 'close-countdown' ? 'close-countdown' : (target !== node ? 'parent' : 'direct');
     rule.structureKind = kind;
+    rule.strategy = learnedButton?.strategy || (targetMarker?.source === 'image-ocr' ? '图片文字兜底' :
+      evidence === 'label' ? '明确广告文字' : ['countdown', 'close-countdown'].includes(evidence) ? '按钮与倒计时' :
+      ['structure', 'control-id'].includes(evidence) || targetMarker?.source === 'splash-id' ? '广告控件结构' : '按钮与广告标记');
     rule.buttonType = target.a.type ?? ''; rule.labelType = node.a.type ?? '';
     const progress = relatedGraphicalCountdown(target, nodes, window);
     if (progress) {
@@ -878,13 +903,134 @@ export function discoverSnapshot(text: string, bundle: string, report: ScanRepor
     rule.left = (target.box.left - window.left) / width; rule.right = (target.box.right - window.left) / width;
     rule.top = (target.box.top - window.top) / height; rule.bottom = (target.box.bottom - window.top) / height;
     rule.aspect = width / height;
+    rule.profile = selectedButtonOnly ? learnedButton?.profile :
+      captureProfile(rule, target, node, nodes, window, progress, targetMarker?.source ?? '', targetMarker?.bounds, learnedButton, !!siblingTarget);
     if (learnedButton) { rule.variant = learnedButton.variant ?? ''; }
     rule.key = ruleKey(rule);
-    result = new SnapshotCandidate(rule, target.box, window, rootA.hostWindowId ?? '');
+    result = new SnapshotCandidate(rule, currentTarget.box, window, rootA.hostWindowId ?? '');
     result.approvedButton = !!learnedButton;
     result.adMarker = learnedButton ? targetMarker : (explicitAdAction(label) ? undefined : targetMarker);
     selectedTarget = target;
   }
   if (result) { report.reason = '已识别广告关闭目标及其依据'; }
   return result;
+}
+
+// Manual training never uses a saved coordinate as input. The user click is
+// correlated to one live compact component; subsequent matches require the
+// same window-relative geometry, type, developer ID and action text.
+function manualText(value: string): string {
+  return skipLabel(value) || (value ?? '').trim().slice(0, 64);
+}
+function manualTree(text: string, bundle: string): SnapshotNode | undefined {
+  if (!text || text.length > 8 * 1024 * 1024) { return undefined; }
+  try {
+    const parsed = JSON.parse(text) as SnapshotNode | SnapshotNode[];
+    const trees = Array.isArray(parsed) ? parsed : [parsed]; normalizeSnapshotTrees(trees);
+    const roots: SnapshotNode[] = []; let count = 0;
+    const walk = (n: SnapshotNode, depth: number): void => {
+      if (!n || depth > 128 || ++count > 20000) { throw new Error('Invalid tree'); }
+      if (n.attributes?.type === 'root') { if (snapshotVisible(n.attributes)) { roots.push(n); } return; }
+      for (const c of n.children ?? []) { walk(c, depth + 1); }
+    };
+    for (const t of trees) { walk(t, 0); }
+    return selectSnapshotRoot(roots, bundle);
+  } catch (_) { return undefined; }
+}
+function manualActionText(node: SnapshotNode, depth: number = 0): string {
+  if (depth > 4) { return ''; }
+  const value = snapshotLabel(node) || node.attributes?.description || '';
+  if (value) { return value; }
+  const labels = (node.children ?? []).map((c: SnapshotNode) => skipLabel(manualActionText(c, depth + 1)))
+    .filter((label: string) => !!label);
+  return labels.length === 1 ? labels[0] : '';
+}
+export function manualSnapshot(text: string, bundle: string, event?: UIElementInfo,
+  saved?: LearnedRule): SnapshotCandidate | undefined {
+  if ((!event && !saved) || (event && (event.bundleName !== bundle || !event.componentRect))) { return undefined; }
+  const root = manualTree(text, bundle); const a = root?.attributes;
+  const window = a ? snapshotBounds(a.origBounds) ?? snapshotBounds(a.bounds) : undefined;
+  if (!root || !a || !window || (a.displayId && a.displayId !== '0') ||
+    (event?.windowId !== undefined && String(event.windowId) !== a.hostWindowId)) { return undefined; }
+  const width = window.right - window.left; const height = window.bottom - window.top;
+  if (saved && Math.abs(saved.aspect - width / height) >= 0.08) { return undefined; }
+  const reference = event?.componentRect ?? { left: window.left + saved!.left * width,
+    right: window.left + saved!.right * width, top: window.top + saved!.top * height, bottom: window.top + saved!.bottom * height };
+  let count = 0; const found: SnapshotCandidate[] = [];
+  const pool: DiscoveryNode[] = []; let selected: DiscoveryNode | undefined;
+  const visit = (n: SnapshotNode, depth: number, order: number, parent?: DiscoveryNode): void => {
+    if (depth > 128 || ++count > 20000) { throw new Error('Invalid tree'); }
+    const v = n.attributes; if (!v || !snapshotVisible(v) || v.enabled === 'false' ||
+      (v.bundleName && v.bundleName !== bundle) || (v.hostWindowId && v.hostWindowId !== a.hostWindowId)) { return; }
+    const box = snapshotBounds(v.bounds);
+    const item = new DiscoveryNode(v, box ?? { left: 0, top: 0, right: 0, bottom: 0 }, order, parent); pool.push(item);
+    if (v.hitTestBehavior === 'HitTestMode.Block') { return; }
+    const label = manualActionText(n);
+    const id = /^\d+$/.test(v.id ?? '') ? '' : (v.id ?? '');
+    const safeType = /^(Text|Button|Image|Row|Column|Stack|Flex|RelativeContainer|SymbolGlyph|View|android\.widget\.(TextView|Button|ImageView)|android\.view\.View)$/.test(v.type ?? '');
+    const identity = event ? v.type === event.type &&
+      (!event.componentId || event.componentId === v.id || event.componentId === v.accessibilityId) &&
+      (!event.text || manualText(event.text) === manualText(label)) :
+      v.type === saved!.buttonType && id === saved!.targetId && manualText(label) === manualText(saved!.example);
+    const tolerance = event ? 2 : Math.min(width, height) * 0.015;
+    if (box && v.enabled === 'true' && v.hitTestBehavior !== 'HitTestMode.None' && safeType && identity &&
+      Math.abs(box.left - reference.left) <= tolerance && Math.abs(box.top - reference.top) <= tolerance &&
+      Math.abs(box.right - reference.right) <= tolerance && Math.abs(box.bottom - reference.bottom) <= tolerance &&
+      isSplashButton(box, window) && !/登录|授权|同意|支付|购买|允许|下一步|隐私|协议|首页|我的|设置|返回|取消/.test(label)) {
+      const r = new LearnedRule(); r.bundle = bundle; r.origin = 'manual'; r.strategy = '手动点击确认';
+      r.targetId = id; r.labelSource = 'manual'; r.marker = 'manual'; r.label = skipLabel(label) || '关闭图标';
+      r.example = label.slice(0, 64); r.buttonType = v.type; r.labelType = v.type;
+      r.left = (box.left - window.left) / width; r.right = (box.right - window.left) / width;
+      r.top = (box.top - window.top) / height; r.bottom = (box.bottom - window.top) / height; r.aspect = width / height;
+      r.variant = saved?.variant ?? ''; r.key = ruleKey(r);
+      found.push(new SnapshotCandidate(r, box, window, a.hostWindowId ?? '')); selected = item;
+    }
+    (n.children ?? []).forEach((c: SnapshotNode, i: number) => { visit(c, depth + 1, i, item); });
+  };
+  try { (root.children ?? []).forEach((c: SnapshotNode, i: number) => { visit(c, 0, i); }); } catch (_) { return undefined; }
+  if (found.length !== 1) {
+    // Some gesture handlers report the enclosing toolbar rather than its
+    // close label. Resolve only a unique, independently evidenced ad target
+    // beneath that exact event source; never infer a tap on the ad surface.
+    if (!event || found.length > 1) { return undefined; }
+    const sources = pool.filter((n: DiscoveryNode) => {
+      const box = snapshotBounds(n.a.origBounds) ?? n.box;
+      return n.a.type === event.type && n.a.enabled === 'true' &&
+        (!event.componentId || event.componentId === n.a.id || event.componentId === n.a.accessibilityId) &&
+        Math.abs(box.left - reference.left) <= 2 && Math.abs(box.top - reference.top) <= 2 &&
+        Math.abs(box.right - reference.right) <= 2 && Math.abs(box.bottom - reference.bottom) <= 2 &&
+        box.bottom - box.top <= height * 0.25;
+    });
+    if (sources.length !== 1) { return undefined; }
+    const candidate = discoverSnapshot(text, bundle, new ScanReport());
+    if (!candidate || candidate.rule.labelSource === 'manual') { return undefined; }
+    const targets = pool.filter((n: DiscoveryNode) => n.a.type === candidate.rule.buttonType &&
+      Math.abs(n.box.left - (window.left + candidate.rule.left * width)) <= 2 && Math.abs(n.box.right - (window.left + candidate.rule.right * width)) <= 2 &&
+      Math.abs(n.box.top - (window.top + candidate.rule.top * height)) <= 2 && Math.abs(n.box.bottom - (window.top + candidate.rule.bottom * height)) <= 2);
+    if (targets.length !== 1 || targets[0] === sources[0]) { return undefined; }
+    let parent = targets[0].parent;
+    while (parent && parent !== sources[0]) { parent = parent.parent; }
+    if (!parent) { return undefined; }
+    const targetEvent: UIElementInfo = { bundleName: bundle, type: targets[0].a.type ?? '', text: '',
+      windowId: event.windowId, componentRect: targets[0].box };
+    return manualSnapshot(text, bundle, targetEvent);
+  }
+  const imageTarget = dismissImageTarget(selected!, pool, window);
+  if (imageTarget === null) { return undefined; }
+  const target = imageTarget ?? selected!;
+  const centerX = (target.box.left + target.box.right) / 2; const centerY = (target.box.top + target.box.bottom) / 2;
+  const related = (other: DiscoveryNode): boolean => {
+    for (let p: DiscoveryNode | undefined = other; p; p = p.parent) { if (p === target) { return true; } }
+    for (let p: DiscoveryNode | undefined = target; p; p = p.parent) { if (p === other) { return true; } }
+    return false;
+  };
+  if (pool.some((other: DiscoveryNode) => (receivesTouch(other) || other.a.hitTestBehavior === 'HitTestMode.Block') &&
+    !related(other) && !definitelyBehind(other, target) && centerX >= other.box.left && centerX <= other.box.right &&
+    centerY >= other.box.top && centerY <= other.box.bottom)) { return undefined; }
+  const candidate = found[0]; candidate.approvedButton = !!saved;
+  candidate.bounds = target.box;
+  candidate.rule.profile = captureProfile(candidate.rule, selected!, selected!, pool, window,
+    relatedGraphicalCountdown(target, pool, window), '', undefined, saved);
+  candidate.adMarker = new AdMarkerEvidence('', 'approved-button', candidate.bounds);
+  return candidate;
 }

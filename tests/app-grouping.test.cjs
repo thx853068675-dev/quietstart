@@ -11,7 +11,8 @@ function load(name, dependencies) {
     { exports, require: name => { assert.ok(Object.hasOwn(dependencies, name), name); return dependencies[name]; } });
   return exports;
 }
-const learning = load('LearningStore', { '@kit.CoreFileKit': { fileIo: {} } });
+const profile = load('RecognitionProfile', {});
+const learning = load('LearningStore', { './RecognitionProfile': profile, '@kit.CoreFileKit': { fileIo: {} } });
 const { appGroup } = load('AppGrouping', { './LearningStore': learning });
 const APP = 'com.example.music';
 const rule = { key: 'one', bundle: APP, firstSeen: 50, suspendedAt: 0 };

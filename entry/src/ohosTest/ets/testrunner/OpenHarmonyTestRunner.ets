@@ -3,6 +3,7 @@ import { hilog } from '@kit.PerformanceAnalysisKit';
 import { Hypium } from '@ohos/hypium';
 import { util } from '@kit.ArkTS';
 import { CatalogPart, LearningStore } from '../../../main/ets/core/LearningStore';
+import { SupervisionStore, validSessionToken } from '../../../main/ets/core/SupervisionStore';
 
 // Official stage-model runner; load UiTest modules after delegator initialization.
 export default class OpenHarmonyTestRunner implements TestRunner {
@@ -40,12 +41,22 @@ export default class OpenHarmonyTestRunner implements TestRunner {
       return;
     }
     if ((args.parameters['-s mode'] || args.parameters['mode']) === 'skip') {
-      await delegator.startAbility({ bundleName: 'com.tonghongxiang.quietstart', abilityName: 'EntryAbility', moduleName: 'entry' });
+      const token = args.parameters['-s supervisor'] || args.parameters['supervisor'] || '';
+      const attempt = Number(args.parameters['-s recoveryAttempt'] || args.parameters['recoveryAttempt'] || '0');
+      if (token && (!validSessionToken(token) || !new SupervisionStore(delegator.getAppContext().filesDir).allows(token) ||
+        !Number.isInteger(attempt) || attempt < 0 || attempt > 3)) {
+        await delegator.finishTest('Supervised session was stopped or replaced', 0); return;
+      }
+      // A recovery already captured the previous exit through EntryAbility.
+      // Rebuilding the test client must not bring the main page forward again.
+      if (!token || attempt === 0) {
+        await delegator.startAbility({ bundleName: 'com.tonghongxiang.quietstart', abilityName: 'EntryAbility', moduleName: 'entry' });
+      }
       const worker = await import('../worker/SkipWorker');
       await new Promise<void>((resolve) => { setTimeout(resolve, 1000); });
       const seconds: number = Number(args.parameters['-s seconds'] || args.parameters['seconds'] || '300');
       delegator.printSync('QuietStartWorker: device session started\n');
-      const result = await worker.run(delegator, seconds);
+      const result = await worker.run(delegator, seconds, token, attempt);
       delegator.printSync('QuietStartWorker: ' + JSON.stringify(result) + '\n');
       await delegator.finishTest('QuietStart device session ended', result.state === 'error' ? 1 : 0);
       return;

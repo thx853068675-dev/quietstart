@@ -1,5 +1,8 @@
 import { PreviewGeometry, previewGeometry } from '../core/PreviewGeometry';
 import { LearnedRule } from '../core/LearningStore';
+import { ProfileLayer, RecognitionProfile, profileForRule } from '../core/RecognitionProfile';
+import { ButtonSample } from './ButtonSample';
+import { buttonSampleLayout } from '../core/ButtonPreviewLayout';
 
 @Component
 export struct RulePhonePreview {
@@ -24,9 +27,12 @@ export struct RulePhonePreview {
 
   aboutToDisappear(): void { this.setPulsing(false); }
 
-  private geometry(): PreviewGeometry { return previewGeometry(this.rule.aspect, this.rule.left, this.rule.top, this.rule.right, this.rule.bottom); }
+  private geometry(): PreviewGeometry {
+    const box = this.profile().button;
+    return previewGeometry(this.rule.aspect, box.left, box.top, box.right, box.bottom);
+  }
+  private profile(): RecognitionProfile { return profileForRule(this.rule); }
   private ringSize(): number { return Math.max(10, Math.min(18, Math.max(this.geometry().markerWidth, this.geometry().markerHeight))); }
-  private ringLabel(): string { return /关闭/.test(this.rule.label) ? '关闭' : this.rule.label === '×' ? '×' : /skip/i.test(this.rule.label) ? 'Skip' : '跳过'; }
   private ringLeft(): number { const g = this.geometry(); return Math.max(0, Math.min(g.width - this.ringSize(), g.markerLeft + g.markerWidth / 2 - this.ringSize() / 2)); }
   private ringTop(): number { const g = this.geometry(); return Math.max(0, Math.min(g.height - this.ringSize(), g.markerTop + g.markerHeight / 2 - this.ringSize() / 2)); }
   private markerX(): number { const g = this.geometry(); return g.x + 3 + (this.rule.progressStyle === 'ring' ? this.ringLeft() + this.ringSize() / 2 : g.markerLeft + g.markerWidth / 2); }
@@ -38,8 +44,11 @@ export struct RulePhonePreview {
     const ui = this.getUIContext();
     const x = ui.vp2px(this.markerX()); const y = ui.vp2px(this.markerY());
     const g = this.geometry();
-    const start = ui.vp2px(this.labelOnRight() ? g.labelX - 3 : g.labelX + g.labelWidth + 3);
-    const labelCenter = ui.vp2px(this.labelY() + 13);
+    const sample = buttonSampleLayout(this.profile(), this.rule.aspect, g.labelWidth, 54);
+    const edge = this.labelOnRight() ? Math.min(sample.frame.x - 4, ...sample.parts.map((part) => part.x)) - 3 :
+      Math.max(sample.frame.x + sample.frame.width + 4, ...sample.parts.map((part) => part.x + part.width)) + 3;
+    const start = ui.vp2px(g.labelX + edge);
+    const labelCenter = ui.vp2px(this.labelY() - 14 + sample.frame.y + sample.frame.height / 2);
     const middle = (start + x) / 2;
     return 'M ' + x + ' ' + y + ' C ' + middle + ' ' + y + ' ' + middle + ' ' + labelCenter + ' ' + start + ' ' + labelCenter;
   }
@@ -48,17 +57,31 @@ export struct RulePhonePreview {
     Stack({ alignContent: Alignment.TopStart }) {
       Stack({ alignContent: Alignment.TopStart }) {
         Stack({ alignContent: Alignment.TopStart }) {
+          ForEach(this.profile().layers.filter((layer: ProfileLayer) => ['container', 'ad-layer', 'image'].includes(layer.role)).slice(0, 5), (layer: ProfileLayer) => {
+            Rect().width((layer.right - layer.left) * this.geometry().width).height((layer.bottom - layer.top) * this.geometry().height)
+              .position({ x: layer.left * this.geometry().width, y: layer.top * this.geometry().height })
+              .stroke($r('app.color.line')).strokeWidth(0.5).fill(layer.role === 'image' ? $r('app.color.line') : Color.Transparent).radius(1).opacity(0.6)
+          })
+          // Decorative page structure remains visible even when captured layers
+          // contain only the small button area. The marker is always drawn last.
           Rect().width('72%').height(3).fill($r('app.color.line')).radius(2).position({ x: '14%', y: '34%' })
+            .id('quietstart-phone-skeleton-title-' + this.rule.key).hitTestBehavior(HitTestMode.None)
           Rect().width('48%').height(3).fill($r('app.color.line')).radius(2).position({ x: '14%', y: '42%' })
+            .id('quietstart-phone-skeleton-body-' + this.rule.key).hitTestBehavior(HitTestMode.None)
           if (this.rule.progressStyle === 'ring') {
             Progress({ value: 72, total: 100, type: ProgressType.Ring })
               .width(this.ringSize()).height(this.ringSize()).color($r('app.color.accent'))
               .backgroundColor($r('app.color.line')).style({ strokeWidth: 2 })
               .opacity(this.markerOpacity).position({ x: this.ringLeft(), y: this.ringTop() })
               .id('quietstart-ad-marker-' + this.rule.key)
+          } else if (['circle', 'ellipse'].includes(this.profile().shape)) {
+            Ellipse().width(this.geometry().markerWidth).height(this.geometry().markerHeight)
+              .fill($r('app.color.accent')).opacity(this.markerOpacity)
+              .position({ x: this.geometry().markerLeft, y: this.geometry().markerTop })
+              .id('quietstart-ad-marker-' + this.rule.key)
           } else {
           Rect().width(this.geometry().markerWidth).height(this.geometry().markerHeight)
-            .fill($r('app.color.accent')).radius(2).opacity(this.markerOpacity)
+            .fill($r('app.color.accent')).radius(this.profile().shape === 'rectangle' ? 0 : this.profile().shape === 'capsule' ? 12 : 2).opacity(this.markerOpacity)
             .position({ x: this.geometry().markerLeft, y: this.geometry().markerTop })
             .id('quietstart-ad-marker-' + this.rule.key)
           }
@@ -73,28 +96,9 @@ export struct RulePhonePreview {
         .opacity(0.55).fill(Color.Transparent).hitTestBehavior(HitTestMode.None)
       Circle().width(3).height(3).fill($r('app.color.accent'))
         .position({ x: this.markerX() - 1.5, y: this.markerY() - 1.5 }).hitTestBehavior(HitTestMode.None)
-      if (this.rule.progressStyle === 'ring') {
-        Stack({ alignContent: Alignment.Center }) {
-          Circle().width(37).height(37).fill($r('app.color.soft'))
-          Progress({ value: 72, total: 100, type: ProgressType.Ring }).width(40).height(40)
-            .color($r('app.color.accent')).backgroundColor($r('app.color.line')).style({ strokeWidth: 2 })
-          Text(this.ringLabel()).fontSize(11).fontWeight(FontWeight.Medium)
-            .fontColor($r('app.color.accent')).textAlign(TextAlign.Center).width(32).maxLines(1)
-            .id('quietstart-ad-label-' + this.rule.key)
-        }.width(40).height(40).position({
-          x: this.labelOnRight() ? this.geometry().labelX : this.geometry().labelX + this.geometry().labelWidth - 40,
-          y: this.labelY() - 7
-        })
-      } else {
-      Row({ space: 4 }) {
-        Text(this.rule.example || this.rule.label).id('quietstart-ad-label-' + this.rule.key)
-          .fontSize(11).fontWeight(FontWeight.Medium).fontColor($r('app.color.accent')).textAlign(TextAlign.Center)
-          .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).constraintSize({ maxWidth: this.geometry().labelWidth }).height(26)
-          .padding({ left: 9, right: 9 }).borderRadius(13).border({ width: 0.5, color: $r('app.color.line') })
-          .backgroundColor($r('app.color.soft'))
-      }.width(this.geometry().labelWidth).height(26).justifyContent(this.labelOnRight() ? FlexAlign.Start : FlexAlign.End)
-        .position({ x: this.geometry().labelX, y: this.labelY() })
-      }
+      ButtonSample({ profile: this.profile(), aspect: this.rule.aspect, sampleWidth: this.geometry().labelWidth, sampleHeight: 54 })
+        .id('quietstart-ad-label-' + this.rule.key)
+        .position({ x: this.geometry().labelX, y: this.labelY() - 14 })
       Text('广告位置').id('quietstart-ad-caption-' + this.rule.key).fontSize(10).fontColor($r('app.color.muted'))
         .width(72).height(16).textAlign(TextAlign.Center).position({ x: 104, y: 134 })
     }.width(280).height(154)

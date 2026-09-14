@@ -1,5 +1,6 @@
 import { BusinessError } from '@kit.BasicServicesKit';
 import { fileIo as fs } from '@kit.CoreFileKit';
+import { ProfileRule, RecognitionProfile, ruleStrategyId, strategyDefinition, validProfile } from './RecognitionProfile';
 
 export const OWN_BUNDLE: string = 'com.tonghongxiang.quietstart';
 export function runtimeAppLabel(name: string, android: boolean): string {
@@ -32,7 +33,8 @@ export class CatalogPart {
   total: number = 0;
   apps: InstalledApp[] = [];
 }
-export class LearnedRule {
+export class LearnedRule implements ProfileRule {
+  sampledAt: number = Date.now(); // Reject observations captured before a rule was deleted.
   key: string = '';
   variant: string = '';
   bundle: string = '';
@@ -44,6 +46,10 @@ export class LearnedRule {
   buttonType: string = '';
   labelType: string = '';
   structureKind: string = '';
+  origin: string = 'auto';
+  strategy: string = '';
+  profile?: RecognitionProfile;
+  autoApproved: boolean = false;
   progressStyle: string = ''; // Preview metadata only; never part of matching or rule identity.
   marker: string = '';
   left: number = 0;
@@ -104,6 +110,9 @@ export function skipLabel(text: string): string {
     .replace(/[（【\[]/g, '(').replace(/[）】\]]/g, ')').replace(/[,，]?(按钮|button)$/, '')
     .replace(/略过/g, '跳过').replace(/(?:跳过|关闭)(?:此|该|本条)广告/g, (value: string) => value.startsWith('跳过') ? '跳过广告' : '关闭广告')
     .replace(/skip(?:this)?(?:advertisement|ads?)/g, 'skipad').replace(/(?:close|dismiss)(?:this)?(?:advertisement|ads?)/g, 'closead');
+  // Two numeric operands around ×/x describe dimensions or a channel (7x24),
+  // not a close action with one countdown. This also protects approved rematches.
+  if (/\d[|｜·•:：/\-]?[x×✕✖✗✘╳][|｜·•:：/\-]?\d/.test(compact)) { return ''; }
   if (/^(?:[（(]?\d{1,2}(?:秒|s|sec|seconds?)?[）)]?[|｜·•:：/\-]?)?(跳过广告|跳过|skipad|skip|关闭广告|closead|关闭|close|[x×✕✖✗✘╳])(?:[|｜·•:：/\-]?[（(]?\d{1,2}(?:秒|s|sec|seconds?)?[）)]?)?$/.test(compact)) {
     if (compact.includes('跳过广告')) { return '跳过广告'; }
     if (compact.includes('跳过')) { return '跳过'; }
@@ -147,8 +156,8 @@ export function isCountdownText(text: string): boolean {
 export function adLabel(text: string): string {
   if (typeof text !== 'string' || text.length > 32) { return ''; }
   const compact = text.replace(/\s/g, '');
-  if (/^广告(?:[·•|｜:：\-].{1,12})?$/.test(compact)) { return '广告'; }
-  if (/^(ad|ads|advertisement)(?:[·•|｜:：\-].{1,12})?$/i.test(compact)) {
+  if (/^广告(?:[·•|｜:：\-].{0,12})?$/.test(compact)) { return '广告'; }
+  if (/^(ad|ads|advertisement)(?:[·•|｜:：\-].{0,12})?$/i.test(compact)) {
     return ['Ad', 'AD', 'Advertisement'].includes(compact) ? compact : 'Ad';
   }
   return '';
@@ -168,7 +177,7 @@ export function ruleKey(rule: LearnedRule): string {
     Math.round(rule.right * 10).toString(), Math.round(rule.bottom * 10).toString(),
     Math.round(rule.aspect * 5).toString()].join('|') +
     (rule.labelSource === 'description' ? '|description' : (rule.labelSource === 'id' ? '|id' : rule.labelSource === 'structure' ? '|structure' : '')) +
-    (rule.variant ? '|geometry:' + rule.variant : '');
+    (rule.labelSource === 'manual' ? '|manual' : '') + (rule.variant ? '|geometry:' + rule.variant : '');
 }
 
 export function validRule(rule: LearnedRule): boolean {
@@ -176,9 +185,13 @@ export function validRule(rule: LearnedRule): boolean {
     (rule.variant !== undefined && rule.variant !== '' && !/^\d+(,\d+){4}$/.test(rule.variant)) ||
     typeof rule.targetId !== 'string' || rule.targetId.length > 200 ||
     !['跳过', '跳过广告', 'skip', 'skipad', '关闭广告', '关闭', '×', '跳过图标', '关闭图标'].includes(rule.label) ||
-    (rule.labelSource !== undefined && !['text', 'description', 'id', 'structure'].includes(rule.labelSource)) ||
+    (rule.labelSource !== undefined && !['text', 'description', 'id', 'structure', 'manual'].includes(rule.labelSource)) ||
     (rule.example !== undefined && (typeof rule.example !== 'string' || rule.example.length > 64)) ||
-    !['label', 'countdown', 'close-countdown', 'control-id', 'structure', '广告', 'Ad', 'AD', 'Advertisement'].includes(rule.marker)) { return false; }
+    !['manual', 'label', 'countdown', 'close-countdown', 'control-id', 'structure', '广告', 'Ad', 'AD', 'Advertisement'].includes(rule.marker)) { return false; }
+  if (rule.origin !== undefined && !['auto', 'manual'].includes(rule.origin)) { return false; }
+  if (rule.strategy !== undefined && (typeof rule.strategy !== 'string' || rule.strategy.length > 40)) { return false; }
+  if (rule.labelSource === 'manual' && (rule.origin !== 'manual' || rule.marker !== 'manual' || !rule.buttonType)) { return false; }
+  if (rule.marker === 'manual' && rule.labelSource !== 'manual') { return false; }
   if ([rule.buttonType, rule.labelType].some((value: string) => value !== undefined &&
     (typeof value !== 'string' || value.length > 80))) { return false; }
   if (rule.progressStyle !== undefined && !['', 'ring', 'linear'].includes(rule.progressStyle)) { return false; }
@@ -188,7 +201,7 @@ export function validRule(rule: LearnedRule): boolean {
   if (rule.marker === 'close-countdown' && !['关闭', '×', '关闭图标'].includes(rule.label)) { return false; }
   if (rule.marker === 'label' && !explicitAdAction(rule.label)) { return false; }
   if (rule.labelSource === 'id' && (controlIdLabel(rule.targetId) !== rule.label || !rule.targetId)) { return false; }
-  if (['跳过图标', '关闭图标'].includes(rule.label) && !['id', 'structure'].includes(rule.labelSource)) { return false; }
+  if (['跳过图标', '关闭图标'].includes(rule.label) && !['id', 'structure', 'manual'].includes(rule.labelSource)) { return false; }
   if ((rule.labelSource === 'structure' || rule.marker === 'structure') &&
     (rule.labelSource !== 'structure' || rule.marker !== 'structure' || rule.label !== '跳过图标' ||
       !['countdown-image', 'splash-corner'].includes(rule.structureKind) || !rule.buttonType)) { return false; }
@@ -210,7 +223,9 @@ export function sameRuleGeometry(stored: LearnedRule, current: LearnedRule): boo
 
 export function ruleState(rule: LearnedRule, decisions: RuleDecision[]): string {
   const decision = decisions.find((item: RuleDecision) => item.key === rule.key);
-  if (!decision || decision.templateAt !== rule.firstSeen || decision.at < rule.firstSeen) { return 'pending'; }
+  if (!decision || decision.templateAt !== rule.firstSeen || decision.at < rule.firstSeen) {
+    return rule.autoApproved === true ? (rule.suspendedAt > 0 ? 'suspended' : 'approved') : 'pending';
+  }
   if (decision.state === 'approved' && rule.suspendedAt > 0 && decision.at <= rule.suspendedAt) { return 'suspended'; }
   return decision.state;
 }
@@ -220,6 +235,32 @@ export function ruleState(rule: LearnedRule, decisions: RuleDecision[]): string 
 export class LearningStore {
   private directory: string;
   constructor(directory: string) { this.directory = directory; }
+  readManualRequest(): ManualLearningRequest {
+    try {
+      const r = JSON.parse(fs.readTextSync(this.directory + '/manual-learning-request.json')) as ManualLearningRequest;
+      if (discoverableBundle(r.bundle) && Number.isSafeInteger(r.at) && r.at > 0 && r.at <= Date.now() &&
+        r.until > r.at && r.until - r.at <= 60000) { return r; }
+    } catch (_) {}
+    return new ManualLearningRequest();
+  }
+  startManualLearning(bundle: string): void {
+    if (!discoverableBundle(bundle)) { throw new Error('Invalid application'); }
+    const r = new ManualLearningRequest(); r.bundle = bundle; r.at = Date.now(); r.until = r.at + 60000;
+    this.write('manual-learning-request.json', JSON.stringify(r));
+  }
+  cancelManualLearning(): void { this.write('manual-learning-request.json', '{}'); }
+  manualResultAcknowledged(at: number): boolean {
+    try { return Number(fs.readTextSync(this.directory + '/manual-learning-ack.txt')) === at; } catch (_) { return false; }
+  }
+  acknowledgeManualResult(at: number): void { this.write('manual-learning-ack.txt', at.toString()); }
+  readManualStatus(): ManualLearningStatus {
+    try { return JSON.parse(fs.readTextSync(this.directory + '/manual-learning-status.json')) as ManualLearningStatus; }
+    catch (_) { return new ManualLearningStatus(); }
+  }
+  saveManualStatus(at: number, state: string, message: string): void {
+    const value = new ManualLearningStatus(); value.at = at; value.state = state; value.message = message;
+    this.write('manual-learning-status.json', JSON.stringify(value));
+  }
   private nameMap(file: string): Record<string, string> {
     try {
       const raw = JSON.parse(fs.readTextSync(this.directory + '/' + file)) as Record<string, string>;
@@ -387,12 +428,35 @@ export class LearningStore {
     resets[bundle] = Math.max(Date.now(), (resets[bundle] ?? 0) + 1);
     this.write('rule-resets.json', JSON.stringify(resets));
   }
+  private readDeletions(): Record<string, number> {
+    let text: string;
+    try { text = fs.readTextSync(this.directory + '/rule-deletions.json'); }
+    catch (error) {
+      if ((error as BusinessError).code === 13900002) { return {}; }
+      throw new Error('Cannot read rule deletion state');
+    }
+    const raw = JSON.parse(text) as Record<string, number>;
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) { throw new Error('Invalid rule deletions'); }
+    for (const key of Object.keys(raw)) {
+      if (key.length > 1024 || !key.includes('|') || !validBundle(key.split('|')[0]) ||
+        !Number.isFinite(raw[key]) || raw[key] <= 0) { throw new Error('Invalid rule deletion'); }
+    }
+    return raw;
+  }
+  deleteRule(key: string): void {
+    const rule = this.readRules().find((item: LearnedRule) => item.key === key);
+    if (!rule) { return; }
+    const deletions = this.readDeletions();
+    deletions[key] = Math.max(Date.now(), rule.firstSeen, (deletions[key] ?? 0) + 1);
+    this.write('rule-deletions.json', JSON.stringify(deletions));
+  }
   readRules(): LearnedRule[] {
     try {
       const resets = this.readResets();
+      const deletions = this.readDeletions();
       const raw = JSON.parse(fs.readTextSync(this.directory + '/learned-rules.json')) as LearnedRule[];
       return Array.isArray(raw) ? raw.filter((rule: LearnedRule) => validRule(rule) &&
-        (!(resets[rule.bundle] > 0) || rule.firstSeen > resets[rule.bundle])).slice(0, 200)
+        rule.firstSeen > Math.max(resets[rule.bundle] ?? 0, deletions[rule.key] ?? 0)).slice(0, 200)
         .map((rule: LearnedRule) => {
           // Preserve historical totals and approvals, but old inconclusive
           // timeouts must not contribute to the new confirmed-failure streak.
@@ -400,6 +464,7 @@ export class LearningStore {
           rule.verificationVersion = 2;
           rule.retained = Number.isFinite(rule.retained) && rule.retained >= 0 ? rule.retained : 0;
           rule.unverified = Number.isFinite(rule.unverified) && rule.unverified >= 0 ? rule.unverified : 0;
+          if (rule.profile && !validProfile(rule.profile)) { rule.profile = undefined; }
           return rule;
         }) : [];
     } catch (_) { return []; }
@@ -433,10 +498,11 @@ export class LearningStore {
   readDecisions(): RuleDecision[] {
     try {
       const resets = this.readResets();
+      const deletions = this.readDeletions();
       const raw = JSON.parse(fs.readTextSync(this.directory + '/rule-decisions.json')) as RuleDecision[];
       return Array.isArray(raw) ? raw.filter((item: RuleDecision) => item && typeof item.key === 'string' &&
         ['pending', 'approved', 'rejected'].includes(item.state) && Number.isFinite(item.at) && item.at > 0 &&
-        Number.isFinite(item.templateAt) && item.templateAt > (resets[item.key.split('|')[0]] ?? 0)) : [];
+        Number.isFinite(item.templateAt) && item.templateAt > Math.max(resets[item.key.split('|')[0]] ?? 0, deletions[item.key] ?? 0)) : [];
     } catch (_) { return []; }
   }
   decide(key: string, state: string): void {
@@ -473,23 +539,39 @@ export class LearningStore {
     }
   }
 
-  observe(candidate: LearnedRule): LearnedRule | undefined {
+  observe(candidate: LearnedRule, autoApprove: boolean = false): LearnedRule | undefined {
     candidate.key = ruleKey(candidate);
     if (!validRule(candidate)) { return undefined; }
     this.resolveCandidate(candidate);
+    const deletedAt = this.readDeletions()[candidate.key] ?? 0;
+    if (deletedAt && ((candidate.firstSeen > 0 && candidate.firstSeen <= deletedAt) ||
+      !candidate.sampledAt || candidate.sampledAt <= deletedAt)) { return undefined; }
     const rules = this.readRules();
     let stored = rules.find((item: LearnedRule) => item.key === candidate.key);
     if (!stored) {
       if (rules.length >= 200) { return undefined; }
-      stored = candidate; stored.firstSeen = Math.max(Date.now(), (this.readResets()[candidate.bundle] ?? 0) + 1); rules.unshift(stored);
+      candidate.autoApproved = autoApprove;
+      stored = candidate; stored.firstSeen = Math.max(Date.now(), (this.readResets()[candidate.bundle] ?? 0) + 1, deletedAt + 1); rules.unshift(stored);
     }
     stored.lastSeen = Date.now(); stored.observations += 1;
+    if (candidate.strategy) { stored.strategy = candidate.strategy; }
     if (candidate.example) { stored.example = candidate.example; }
     if (candidate.recognition) { stored.recognition = candidate.recognition; }
     if (candidate.buttonType) { stored.buttonType = candidate.buttonType; }
     if (candidate.structureKind) { stored.structureKind = candidate.structureKind; }
     if (candidate.progressStyle) { stored.progressStyle = candidate.progressStyle; }
     if (candidate.labelType) { stored.labelType = candidate.labelType; }
+    if (validProfile(candidate.profile)) {
+      const profile = candidate.profile!;
+      // Later image-memory/fast matches must not rewrite how the rule was
+      // first established. Newly observed auxiliary evidence may be added.
+      if (validProfile(stored.profile)) {
+        profile.strategyId = stored.profile!.strategyId; profile.strategyVersion = stored.profile!.strategyVersion;
+        const evidence = stored.profile!.evidence.concat(profile.evidence);
+        profile.evidence = evidence.filter((s: string, i: number) => evidence.indexOf(s) === i);
+      }
+      stored.profile = profile;
+    }
     this.saveRules(rules);
     return stored;
   }
@@ -513,4 +595,14 @@ export class LearningStore {
     try { fs.writeSync(file.fd, contents); } finally { fs.closeSync(file); }
     fs.renameSync(path + '.tmp', path);
   }
+}
+
+export class ManualLearningRequest {
+  bundle: string = ''; at: number = 0; until: number = 0;
+}
+export class ManualLearningStatus {
+  at: number = 0; state: string = ''; message: string = '';
+}
+export function ruleStrategy(rule: LearnedRule): string {
+  return strategyDefinition(ruleStrategyId(rule)).name;
 }

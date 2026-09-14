@@ -1,11 +1,18 @@
+import { StatMetric } from '../components/StatMetric';
+import { ButtonSample } from '../components/ButtonSample';
+import { RECOGNITION_STRATEGIES, RecognitionStrategy, RecognitionProfile, ruleStrategyId,
+  profileForRule, shapeName, contentName, targetName, evidenceName, layerName, ProfileLayer, strategySample } from '../core/RecognitionProfile';
 import { WorkerInstaller } from '../core/WorkerInstaller';
+import { SupervisionStore } from '../core/SupervisionStore';
+import { SystemExitRecord, SystemExitStore, exitReasonLabel, userRequestedExit } from '../core/SystemExitStore';
+import { pasteboard } from '@kit.BasicServicesKit';
 import { PauseProgress, pauseProgress } from '../core/PauseProgress';
 import { strategyProblem, strategyPreview } from '../core/StrategyEditor';
 import { RecognitionRule } from '../core/RulePack';
 import { RulePackStore } from '../core/RulePackStore';
 import { appGroup } from '../core/AppGrouping';
 import { AdFreeEntry, AdFreeStore } from '../core/AdFreeStore';
-import { runtimeAppLabel, InstalledApp, LearnedRule, LearningStore, RuleDecision, LearningDiagnostic, LearnedAppGroup, groupLearnedRules, ruleState } from '../core/LearningStore';
+import { ruleStrategy, runtimeAppLabel, InstalledApp, LearnedRule, LearningStore, RuleDecision, LearningDiagnostic, LearnedAppGroup, groupLearnedRules, ruleState } from '../core/LearningStore';
 import { notificationManager } from '@kit.NotificationKit';
 import { ReminderState, SkipReminder } from '../core/SkipReminder';
 import { common, bundleManager } from '@kit.AbilityKit';
@@ -29,6 +36,14 @@ struct Index {
   @State strategyEdit: number = -1;
   private detailScroller: Scroller = new Scroller();
   @State strategyAdvanced: boolean = false;
+  @State strategyWordsOpen: boolean = false;
+  @State strategyFocus: string = '';
+  @State strategyRuleKey: string = '';
+  @State ruleQuery: string = '';
+  @State autoEnableRules: boolean = false;
+  @State newRuleReminders: boolean = true;
+  @State manualMessage: string = '';
+  @State manualActive: boolean = false;
   @State strategyAppQuery: string = '';
   @State strategyExcludeWord: string = '';
   @State pauseOptionsOpen: boolean = false;
@@ -56,6 +71,9 @@ struct Index {
   @State skipEnabled: boolean = false;
   @State allowedPackages: string[] = [];
   @State debugStatus: DebugStatus = new DebugStatus();
+  @State systemExits: SystemExitRecord[] = [];
+  @State exitExpanded: number = 0;
+  @State supervisionNotice: string = '';
   @State online: boolean = false;
   @State secondsLeft: number = 0;
   @State notice: string = '';
@@ -92,7 +110,6 @@ struct Index {
   @State ignoredPackages: string[] = [];
   @State editingBundle: string = '';
   @State editingName: string = '';
-  @State ruleBundle: string = '';
   @State learnedRules: LearnedRule[] = [];
   @State decisions: RuleDecision[] = [];
   @State diagnostics: LearningDiagnostic[] = [];
@@ -148,6 +165,7 @@ struct Index {
 
   private openStrategy(): void {
     this.refreshRulePack();
+    this.strategyFocus = ''; this.strategyRuleKey = ''; this.strategyWordsOpen = false;
     this.strategyEdit = -1; this.rulePackMessage = ''; this.detail = 'strategy';
   }
   private editStrategy(index: number): void {
@@ -159,6 +177,15 @@ struct Index {
     this.detailScroller.scrollTo({ xOffset: 0, yOffset: 0 });
   }
   private resetDetailScroll(): void { this.detailScroller.scrollTo({ xOffset: 0, yOffset: 0 }); }
+  private openRecognitionStrategy(rule?: LearnedRule): void {
+    this.strategyFocus = rule ? ruleStrategyId(rule) : ''; this.strategyRuleKey = rule?.key ?? '';
+    this.strategyEdit = -1; this.strategyWordsOpen = false; this.detail = 'strategy';
+  }
+  private strategySampleProfile(id: string): RecognitionProfile {
+    const rule = this.learnedRules.find((r: LearnedRule) => r.key === this.strategyRuleKey);
+    return rule && ruleStrategyId(rule) === id ? profileForRule(rule) : strategySample(id);
+  }
+  private strategySampleAspect(): number { return this.learnedRules.find((r: LearnedRule) => r.key === this.strategyRuleKey)?.aspect ?? 0.62; }
   private strategyDraft(): RecognitionRule {
     const rule = new RecognitionRule(); rule.id = this.strategyRules[this.strategyEdit]?.id || ('local-' + Date.now());
     rule.value = this.strategyValue.trim(); rule.field = this.strategyField; rule.match = this.strategyMatch;
@@ -203,6 +230,25 @@ struct Index {
       AppStorage.set<boolean>('quietstartOpenRecords', false); this.detail = 'records';
     }
     const config: Settings = this.store?.readSettings() ?? new Settings();
+    if (AppStorage.get<boolean>('quietstartOpenRules') === true) {
+      AppStorage.set<boolean>('quietstartOpenRules', false);
+      this.showAllRules = true; this.ruleFilter = [1]; this.ruleQuery = ''; this.go(2);
+    }
+    this.autoEnableRules = config.autoEnableRules;
+    this.newRuleReminders = config.newRuleRemindersEnabled;
+    const request = this.learningStore?.readManualRequest();
+    const manual = this.learningStore?.readManualStatus();
+    this.manualActive = !!request?.at && request.bundle === this.editingBundle && Date.now() < request.until &&
+      (manual?.at !== request.at || manual.state === 'listening');
+    this.manualMessage = request?.bundle === this.editingBundle && manual?.at === request.at ? manual.message : '';
+    if (this.foreground && request?.at && Date.now() <= request.until + 60000 && manual?.at === request.at &&
+      ['saved', 'failed', 'expired', 'unsupported', 'cancelled'].includes(manual.state) && !this.learningStore?.manualResultAcknowledged(request.at)) {
+      this.learningStore?.acknowledgeManualResult(request.at);
+      this.editingBundle = request.bundle; this.editingName = this.appName(request.bundle); this.detail = 'app';
+      this.manualActive = false; this.manualMessage = manual.message;
+      this.getUIContext().showAlertDialog({ title: manual.state === 'saved' ? '学习成功' : manual.state === 'cancelled' ? '学习已结束' : '本次未学到规则',
+        message: manual.message, confirm: { value: '知道了', action: () => {} } });
+    }
     this.skipEnabled = config.enabled === true;
     this.learningEnabled = config.learningEnabled;
     this.autoAdFree = config.autoAdFree;
@@ -223,6 +269,8 @@ struct Index {
     this.decisions = this.learningStore?.readDecisions() ?? [];
     this.diagnostics = this.learningStore?.readDiagnostics() ?? [];
     this.allowedPackages = Array.isArray(config.packages) ? config.packages : [];
+    this.allowedPackages = this.allowedPackages.concat(this.learnedRules.filter((r: LearnedRule) =>
+      r.autoApproved === true && ruleState(r, this.decisions) === 'approved').map((r: LearnedRule) => r.bundle)).filter((b: string, i: number, all: string[]) => all.indexOf(b) === i);
     this.refreshFilterCounts();
     this.debugStatus = this.debugStore?.readStatus() ?? new DebugStatus();
     this.online = isDebugOnline(this.debugStatus);
@@ -230,8 +278,17 @@ struct Index {
     this.secondsLeft = this.online ? Math.max(0, Math.ceil((this.debugStatus.expiresAt - Date.now()) / 1000)) : 0;
     const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
     this.activation = new LocalActivation(context.getApplicationContext().filesDir).readState();
+    this.systemExits = new SystemExitStore(context.getApplicationContext().filesDir).read();
+    this.supervisionNotice = new SupervisionStore(context.getApplicationContext().filesDir).notice();
     this.activating = this.activation.startedAt > 0 && this.activation.finishedAt === 0 &&
       !this.online;
+    const resume = AppStorage.get<string>('quietstartInstallResume') ?? '';
+    if (resume) {
+      AppStorage.set<string>('quietstartInstallResume', '');
+      if (resume === this.activation.installToken && !this.activation.finishedAt && !this.online) {
+        this.activateLocally(resume).catch(() => {});
+      }
+    }
   }
 
   private refreshFilterCounts(): void {
@@ -260,14 +317,15 @@ struct Index {
     }
   }
 
-  private async activateLocally(): Promise<void> {
-    if (this.activating || this.online) { return; }
+  private async activateLocally(resumeToken: string = ''): Promise<void> {
+    const resumeHash = resumeToken && resumeToken === this.activation.installToken && !this.activation.finishedAt ? this.activation.installHash : '';
+    if ((this.activating && !resumeHash) || this.online) { return; }
     this.activating = true;
     const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
     this.activator?.close();
     this.activator = new LocalActivation(context.getApplicationContext().filesDir,
-      (shell, progress) => new WorkerInstaller(context.resourceManager, context.getApplicationContext().filesDir).ensure(shell, progress));
-    try { await this.activator.activate(this.debugPort); }
+      (shell, progress) => new WorkerInstaller(context.resourceManager, context.getApplicationContext().filesDir).ensure(shell, progress, resumeHash));
+    try { await this.activator.activate(resumeHash ? this.activation.port : this.debugPort); }
     catch (error) { this.notice = (error as Error).message; }
     this.refresh();
   }
@@ -334,6 +392,70 @@ struct Index {
     this.store.saveSettings(settings); this.refresh();
   }
 
+  private async startManualLearning(): Promise<void> {
+    if (!this.online) { this.notice = '请先完成本机连接，再开始强化学习。'; return; }
+    try {
+      this.searchController.stopEditing(); this.searchEditing = false;
+      this.learningStore?.startManualLearning(this.editingBundle);
+      if (this.store) {
+        const settings = this.store.readSettings();
+        settings.ignoredPackages = settings.ignoredPackages.filter((b: string) => b !== this.editingBundle);
+        if (!settings.packages.includes(this.editingBundle)) { settings.packages.push(this.editingBundle); }
+        this.store.saveSettings(settings); this.adFree?.release(this.editingBundle);
+      }
+      this.notice = ''; this.refresh();
+      const request = this.learningStore?.readManualRequest();
+      if (!request?.at) { throw new Error('学习请求未保存'); }
+      let ready = false;
+      for (let attempt = 0; attempt < 30; attempt++) {
+        if (this.learningStore?.readManualRequest().at !== request.at) { return; }
+        const status = this.learningStore?.readManualStatus();
+        if (status?.at === request.at) {
+          if (status.state !== 'listening') { this.refresh(); return; }
+          ready = true; break;
+        }
+        await new Promise<void>((resolve) => { setTimeout(resolve, 100); });
+      }
+      if (!ready || !this.foreground) {
+        this.learningStore?.saveManualStatus(request.at, 'failed', ready ? '轻启已离开前台，请返回后重新开始。' : '工作模块未能及时准备点击监听，请确认本机连接在线后重试。');
+        this.refresh(); return;
+      }
+      const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
+      try {
+        // Launch the selected app's declared home skill from the foreground UI.
+        // No SDK, shell query, guessed ability name or installed-app inventory.
+        await context.startAbility({ bundleName: request.bundle, action: 'ohos.want.action.home', entities: ['entity.system.home'] });
+      } catch (_) {
+        this.learningStore?.saveManualStatus(request.at, 'failed', '系统未能打开此应用的桌面入口。请确认应用可正常启动后重试。'); this.refresh();
+      }
+    } catch (_) { this.notice = '未能启动强化学习，请重试。'; }
+  }
+  private setAutoEnable(value: boolean): void {
+    if (!this.store) { return; }
+    const settings = this.store.readSettings(); settings.autoEnableRules = value;
+    this.saveSettings(settings, value ? '以后自动识别的新规则将直接启用；已停用规则保持不变。' : '以后自动识别的新规则需确认启用。');
+  }
+  private async setNewRuleReminder(value: boolean): Promise<void> {
+    if (!this.store) { return; }
+    const settings = this.store.readSettings(); settings.newRuleRemindersEnabled = value;
+    this.saveSettings(settings, value ? '学到新规则时通知' : '已关闭新规则通知');
+    if (value) {
+      try { await notificationManager.requestEnableNotification(this.getUIContext().getHostContext() as common.UIAbilityContext); }
+      catch (_) { this.notice = '请在系统通知设置中允许轻启通知。'; }
+    } else { try { await notificationManager.cancel(70603); } catch (_) {} }
+  }
+  private deleteRule(rule: LearnedRule): void {
+    this.getUIContext().showAlertDialog({
+      title: '删除这条规则？',
+      message: '仅删除' + this.appName(rule.bundle) + '当前这条规则及其统计，其他规则保留。以后再次识别到此样式时，可重新学习。',
+      primaryButton: { value: '取消', action: () => {} },
+      secondaryButton: { value: '删除', action: () => {
+        try { this.learningStore?.deleteRule(rule.key); this.notice = '已删除这条规则，其他规则保留。'; }
+        catch (_) { this.notice = '未能删除规则，请重试。'; }
+        this.refresh();
+      } }
+    });
+  }
   private resetRules(bundle: string): void {
     const count = this.learnedRules.filter((rule: LearnedRule) => rule.bundle === bundle).length;
     if (!count || !this.learningStore || !this.store) { return; }
@@ -419,7 +541,9 @@ struct Index {
   }
 
   private ruleList(): LearnedRule[] {
-    return this.learnedRules.filter((rule: LearnedRule) => (!this.ruleBundle || rule.bundle === this.ruleBundle) &&
+    const query = this.ruleQuery.trim().toLowerCase();
+    return this.learnedRules.filter((rule: LearnedRule) => (!query ||
+      [this.appName(rule.bundle), rule.bundle, rule.label, rule.example ?? '', ruleStrategyId(rule), ruleStrategy(rule)].join(' ').toLowerCase().includes(query)) &&
       (this.showAllRules || ['pending', 'suspended'].includes(ruleState(rule, this.decisions))));
   }
 
@@ -444,7 +568,58 @@ struct Index {
     const settings: Settings = this.store.readSettings();
     settings.enabled = false;
     settings.stopRequested = true;
-    this.saveSettings(settings, '正在结束本次会话。轻启将关闭；再次打开后可通过本机无线调试激活。');
+    const directory = (this.getUIContext().getHostContext() as common.UIAbilityContext).getApplicationContext().filesDir;
+    try {
+      new SupervisionStore(directory).stop();
+      new SystemExitStore(directory).markExpected('user-stop');
+    } catch (_) { this.notice = '未能停止自动恢复，请重试。'; return; }
+    this.saveSettings(settings, '正在结束连接与自动恢复。需要时可重新连接。');
+  }
+
+  private copyExitRecords(): void {
+    const directory = (this.getUIContext().getHostContext() as common.UIAbilityContext).getApplicationContext().filesDir;
+    pasteboard.getSystemPasteboard().setData(pasteboard.createData(pasteboard.MIMETYPE_TEXT_PLAIN,
+      new SystemExitStore(directory).exportText())).then(() => { this.notice = '完整退出记录已复制';
+      this.getUIContext().getPromptAction().showToast({ message: '完整退出记录已复制' });
+    }).catch(() => { this.getUIContext().getPromptAction().showToast({ message: '复制失败，请重试' }); });
+  }
+
+  private exitAction(row: SystemExitRecord): string {
+    if (row.expectedAction === 'activation') { return '本机连接启动'; }
+    if (row.expectedAction === 'module-install') { return '工作模块安装'; }
+    if (row.expectedAction === 'worker-restart') { return '工作会话重建'; }
+    if (row.expectedAction === 'user-stop') { return '主动结束连接'; }
+    return row.recoveryAttempt > 0 ? '恢复检查第 ' + row.recoveryAttempt + ' 次' : '';
+  }
+
+  @Builder
+  healthPage() {
+    Column({ space: 12 }) {
+      Text('退出记录').fontSize(20).fontWeight(FontWeight.Medium).fontColor($r('app.color.ink')).width('100%')
+      Text('系统在下次打开时提供退出原因。仅保留本机最近 20 条；未提供的信息不作推断。')
+        .fontSize(12).lineHeight(19).fontColor($r('app.color.muted')).width('100%')
+      Button('复制完整记录').id('quietstart-copy-exits').height(40).width('100%').enabled(this.systemExits.length > 0)
+        .backgroundColor($r('app.color.soft')).fontColor($r('app.color.accent')).onClick(() => { this.copyExitRecords(); })
+      if (!this.systemExits.length) { Text('尚无系统退出记录').fontSize(14).fontColor($r('app.color.muted')) }
+      ForEach(this.systemExits, (row: SystemExitRecord) => {
+        Column({ space: 8 }) {
+          Row() {
+            Text(userRequestedExit(row.reason, row.message) ? '用户结束应用' : exitReasonLabel(row.reason)).fontSize(15).fontWeight(FontWeight.Medium).fontColor($r('app.color.ink')).layoutWeight(1)
+            Text(this.timeLabel(row.detail?.timestamp || row.capturedAt)).fontSize(11).fontColor($r('app.color.muted'))
+          }.width('100%')
+          if (this.exitAction(row)) { Text(this.exitAction(row)).fontSize(12).fontColor($r('app.color.accent')).width('100%') }
+          Text(row.message || row.detail?.exitMsg || '系统未附带详细说明').fontSize(12).lineHeight(20).fontColor($r('app.color.muted')).width('100%')
+          Text(row.environment.osVersion + ' · API ' + row.environment.apiVersion + ' · 轻启 ' + row.environment.appVersion)
+            .fontSize(11).lineHeight(18).fontColor($r('app.color.muted')).width('100%')
+          if (this.exitExpanded === row.capturedAt) {
+            Text(JSON.stringify(row, null, 2)).fontSize(11).lineHeight(17).fontColor($r('app.color.muted')).width('100%').copyOption(CopyOptions.InApp)
+          }
+          Button(this.exitExpanded === row.capturedAt ? '收起详细数据' : '查看详细数据').height(30).width('100%')
+            .backgroundColor($r('app.color.soft')).fontColor($r('app.color.accent')).fontSize(12)
+            .onClick(() => { this.exitExpanded = this.exitExpanded === row.capturedAt ? 0 : row.capturedAt; })
+        }.padding(14).width('100%').borderRadius(16).backgroundColor($r('app.color.surface'))
+      }, (row: SystemExitRecord) => row.capturedAt.toString())
+    }.width('100%')
   }
 
   private saveSettings(settings: Settings, success: string): void {
@@ -584,7 +759,7 @@ struct Index {
   private continueGuide(): void {
     if (!this.online) { this.detail = 'activation'; }
     else if (!this.skipEnabled) { this.setEnabled(true); }
-    else if (this.pendingCount()) { this.ruleBundle = ''; this.showAllRules = false; this.go(2); }
+    else if (this.pendingCount()) { this.ruleQuery = ''; this.showAllRules = false; this.go(2); }
     else if (!this.approvedCount() && (!this.learningEnabled || !this.discoverApps)) { this.setDiscovery(true); this.setLearning(true); }
 
   }
@@ -668,14 +843,6 @@ struct Index {
   }
 
   @Builder
-  metric(value: string, label: string) {
-    Column({ space: 4 }) {
-      Text(value).fontSize(23).fontWeight(FontWeight.Bold).fontColor($r('app.color.ink')).width('100%').textAlign(TextAlign.Center)
-      Text(label).fontSize(11).fontColor($r('app.color.muted')).width('100%').textAlign(TextAlign.Center)
-    }.layoutWeight(1).alignItems(HorizontalAlign.Center)
-  }
-
-  @Builder
   homePage() {
     Scroll() {
       Column({ space: 16 }) {
@@ -708,9 +875,9 @@ struct Index {
               .selectedColor($r('app.color.accent')).onChange((value: boolean) => { this.setEnabled(value); })
           }.width('100%')
           Row({ space: 14 }) {
-            this.metric(this.managedApps.filter((app: InstalledApp) => this.appCategory(app.bundleName) === 0).length.toString(), '跳过应用')
-            this.metric(this.approvedCount().toString(), '启用规则')
-            this.metric(this.debugStatus.observedDismissedCount.toString(), '本次已跳过')
+            StatMetric({ value: this.managedApps.filter((app: InstalledApp) => this.appCategory(app.bundleName) === 0).length.toString(), label: '跳过应用' })
+            StatMetric({ value: this.approvedCount().toString(), label: '启用规则' })
+            StatMetric({ value: this.debugStatus.clickCount.toString(), label: '本次已跳过' })
           }.width('100%')
           Divider().color($r('app.color.line'))
           Column({ space: 6 }) {
@@ -723,6 +890,9 @@ struct Index {
             Button(this.guideAction()).id('quietstart-next-step').width('100%').height(44)
               .backgroundColor($r('app.color.accent')).fontColor($r('app.color.on_accent'))
               .onClick(() => { this.continueGuide(); })
+          }
+          if (!this.online && this.supervisionNotice) {
+            Text(this.supervisionNotice).id('quietstart-recovery-notice').fontSize(12).lineHeight(20).fontColor($r('app.color.warning')).width('100%')
           }
           if (this.online) { this.sessionDetails(); }
         }.width('100%').padding(18).borderRadius(22).backgroundColor($r('app.color.surface'))
@@ -797,38 +967,49 @@ struct Index {
 
   @Builder
   ruleDetails(rule: LearnedRule, index: number) {
-    Column({ space: 12 }) {
-      Column({ space: 8 }) {
-        RulePhonePreview({ rule: rule, positionLabel: this.rulePosition(rule) })
-      }.width('100%').alignItems(HorizontalAlign.Center)
+    Column({ space: 10 }) {
+      RulePhonePreview({ rule: rule, positionLabel: this.rulePosition(rule) })
       Row({ space: 10 }) {
-        this.metric(rule.successes.toString(), '确认消失')
-        this.metric(rule.attempts.toString(), '尝试点击')
-        this.metric(rule.unverified.toString(), '未能确认')
+        StatMetric({ value: rule.successes.toString(), label: '确认消失' })
+        StatMetric({ value: rule.attempts.toString(), label: '尝试点击' })
+        StatMetric({ value: rule.unverified.toString(), label: '未能确认' })
       }.width('100%')
-      if (ruleState(rule, this.decisions) === 'approved') {
-        Button('停用此规则').id('quietstart-reject-' + rule.key).height(42).width('100%').fontSize(14)
-          .backgroundColor($r('app.color.soft')).fontColor($r('app.color.accent'))
-          .onClick(() => { this.decide(rule, 'rejected'); })
-      } else {
-        Button('启用此规则').id('quietstart-approve-' + rule.key).height(42).width('100%').fontSize(14)
-          .backgroundColor($r('app.color.accent')).fontColor($r('app.color.on_accent'))
-          .onClick(() => { this.decide(rule, 'approved'); })
-      }
-    }.width('100%').id('quietstart-rule-' + rule.key)
+      Row({ space: 10 }) {
+        if (ruleState(rule, this.decisions) === 'approved') {
+          Button('停用此规则').id('quietstart-reject-' + rule.key).height(42).layoutWeight(1).fontSize(14)
+            .backgroundColor($r('app.color.soft')).fontColor($r('app.color.accent'))
+            .onClick(() => { this.decide(rule, 'rejected'); })
+        } else {
+          Button('启用此规则').id('quietstart-approve-' + rule.key).height(42).layoutWeight(1).fontSize(14)
+            .backgroundColor($r('app.color.accent')).fontColor($r('app.color.on_accent'))
+            .onClick(() => { this.decide(rule, 'approved'); })
+        }
+        Button({ type: ButtonType.Circle }) {
+          SymbolGlyph($r('sys.symbol.trash')).fontSize(18).fontColor([$r('app.color.muted')])
+        }.id('quietstart-delete-rule-' + rule.key).width(42).height(42)
+          .backgroundColor($r('app.color.soft')).accessibilityText('删除当前规则')
+          .onClick(() => { this.deleteRule(rule); })
+      }.width('100%')
+    }.width('100%').alignItems(HorizontalAlign.Center).id('quietstart-rule-' + rule.key)
   }
 
   @Builder
   learningPage() {
     Scroll() {
       Column({ space: 14 }) {
-        this.titleBlock('规则', '确认样式后，自动跳过')
+        this.titleBlock('规则', '')
         SegmentButton({ options: this.ruleFilterOptions, selectedIndexes: $ruleFilter })
           .id('quietstart-rule-filter').width('100%')
+        Search({ value: this.ruleQuery, placeholder: '搜索应用、按钮或策略编号' }).id('quietstart-rule-search')
+          .width('100%').height(42).textFont({ size: 14 }).fontColor($r('app.color.ink'))
+          .placeholderColor($r('app.color.muted')).searchIcon({ color: $r('app.color.accent') })
+          .cancelButton({ style: CancelButtonStyle.INPUT, icon: { color: $r('app.color.muted') } })
+          .backgroundColor($r('app.color.surface')).borderRadius(14)
+          .onChange((value: string) => { this.ruleQuery = value; this.syncRuleIndex(); })
         if (this.ruleList().length === 0) {
           Column({ space: 12 }) {
-            Text(this.ruleBundle ? '此应用暂无' + (this.showAllRules ? '规则' : '待确认规则') : (this.showAllRules ? '暂无规则' : (this.learnedRules.length ? '暂时没有待确认规则' : '从打开一个应用开始'))).fontSize(18).fontWeight(FontWeight.Medium).fontColor($r('app.color.ink'))
-            Text(this.ruleBundle ? '可切换下方应用筛选，或继续使用此应用学习新样式。' : (this.learnedRules.length ? '遇到新样式时，再来确认。' : '连接并开启学习后，打开应用即可发现新样式。'))
+            Text(this.ruleQuery ? '没有匹配的规则' : (this.showAllRules ? '暂无规则' : (this.learnedRules.length ? '暂时没有待确认规则' : '从打开一个应用开始'))).fontSize(18).fontWeight(FontWeight.Medium).fontColor($r('app.color.ink'))
+            Text(this.ruleQuery ? '换个关键词，或切换至全部规则。' : (this.learnedRules.length ? '遇到新样式时，再来确认。' : '连接并开启学习后，打开应用即可发现新样式。'))
               .fontSize(13).lineHeight(21).fontColor($r('app.color.muted'))
             if (this.learnedRules.length && !this.showAllRules) {
               Button('查看全部规则').height(40).width('100%')
@@ -837,21 +1018,24 @@ struct Index {
             }
           }.padding(20).borderRadius(18).backgroundColor($r('app.color.surface')).width('100%').alignItems(HorizontalAlign.Start)
         }
-        if (this.ruleBundle) {
-          Button('正在查看 ' + this.appName(this.ruleBundle) + ' · 查看全部应用').height(34).fontSize(12)
-            .backgroundColor($r('app.color.soft')).fontColor($r('app.color.accent')).onClick(() => { this.ruleBundle = ''; })
-        }
         ForEach(this.ruleGroups(), (group: LearnedAppGroup) => {
-          Column({ space: 14 }) {
+          Column({ space: 4 }) {
             Row({ space: 8 }) {
-              this.appIcon(group.bundle, 32)
-              Text(this.appName(group.bundle)).maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis }).fontSize(18).fontWeight(FontWeight.Bold).fontColor($r('app.color.ink')).layoutWeight(1)
-              Button('重新学习').id('quietstart-reset-rules-' + group.bundle).height(24).fontSize(11)
-                .padding({ left: 8, right: 8 }).margin({ right: 8 })
-                .backgroundColor($r('app.color.soft')).fontColor($r('app.color.accent'))
-                .onClick(() => { this.resetRules(group.bundle); })
-              Text(group.rules.length > 1 ? (this.rulePageIndex(group) + 1) + ' / ' + group.rules.length : '1 条规则')
-                .id('quietstart-rule-page-' + group.bundle).fontSize(12).fontColor($r('app.color.muted'))
+              Row({ space: 8 }) {
+                this.appIcon(group.bundle, 32)
+                Text(this.appName(group.bundle)).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).fontSize(16).fontWeight(FontWeight.Bold).fontColor($r('app.color.ink')).layoutWeight(1)
+              }.layoutWeight(1)
+              Button(ruleStrategyId(group.rules[this.rulePageIndex(group)]) + ' · ' +
+                (group.rules[this.rulePageIndex(group)].origin === 'manual' ? '手动学习' : '自动识别'))
+                .id('quietstart-rule-strategy-' + group.rules[this.rulePageIndex(group)].key)
+                .width(104).height(28).padding({ left: 6, right: 6 }).fontSize(11)
+                .fontColor($r('app.color.accent')).backgroundColor($r('app.color.soft'))
+                .accessibilityText('查看识别策略 ' + ruleStrategyId(group.rules[this.rulePageIndex(group)]) + ' ' + ruleStrategy(group.rules[this.rulePageIndex(group)]))
+                .onClick(() => { this.openRecognitionStrategy(group.rules[this.rulePageIndex(group)]); })
+              Row() {
+                Text(group.rules.length > 1 ? (this.rulePageIndex(group) + 1) + ' / ' + group.rules.length : '1 条规则')
+                  .id('quietstart-rule-page-' + group.bundle).fontSize(12).fontColor($r('app.color.muted'))
+              }.layoutWeight(1).justifyContent(FlexAlign.End)
             }.width('100%')
             if (group.rules.length > 1) {
               Swiper() {
@@ -917,7 +1101,6 @@ struct Index {
   @Builder
   strategyPage() {
     Column({ space: 14 }) {
-      Text('编辑补充文字条件，基础识别和防误触检查仍保留。').fontSize(13).fontColor($r('app.color.muted')).width('100%')
       if (this.strategyEdit >= 0) {
         Column({ space: 14 }) {
           Text(this.strategyField === 'text' ? '1 · 按钮上写着什么？' : '1 · 图标的说明是什么？').fontSize(17).fontWeight(FontWeight.Medium).fontColor($r('app.color.ink')).width('100%')
@@ -1021,6 +1204,40 @@ struct Index {
           }.padding(16).borderRadius(18).backgroundColor($r('app.color.surface')).width('100%')
         }
       } else {
+        Text('已有规则优先匹配；新样式先读控件，图片文字最后兜底。').fontSize(12).fontColor($r('app.color.muted')).width('100%')
+        if (this.strategyFocus) {
+          Button('查看全部 8 种识别方式').height(36).width('100%').fontColor($r('app.color.accent')).backgroundColor($r('app.color.soft'))
+            .onClick(() => { this.strategyFocus = ''; this.strategyRuleKey = ''; this.resetDetailScroll(); })
+        }
+        ForEach(RECOGNITION_STRATEGIES.filter((s: RecognitionStrategy) => !this.strategyFocus || this.strategyFocus === s.id), (item: RecognitionStrategy) => {
+          Column({ space: 10 }) {
+            Row({ space: 8 }) {
+              Text(item.id).fontSize(12).fontWeight(FontWeight.Bold).fontColor($r('app.color.accent'))
+                .padding({ left: 8, right: 8, top: 5, bottom: 5 }).backgroundColor($r('app.color.soft')).borderRadius(8)
+              Text(item.name).fontSize(16).fontWeight(FontWeight.Medium).fontColor($r('app.color.ink')).layoutWeight(1)
+              Text(this.learnedRules.filter((r: LearnedRule) => ruleStrategyId(r) === item.id).length + ' 条').fontSize(11).fontColor($r('app.color.muted'))
+            }.width('100%')
+            Row({ space: 12 }) {
+              ButtonSample({ profile: this.strategySampleProfile(item.id), aspect: this.strategySampleAspect(), sampleWidth: 112, sampleHeight: 64 })
+              Text(item.example).fontSize(12).lineHeight(18).fontColor($r('app.color.muted')).layoutWeight(1)
+            }.width('100%')
+            Text('如何确认 · ' + item.proof).fontSize(12).lineHeight(19).fontColor($r('app.color.ink')).width('100%')
+            Text('点击哪里 · ' + item.target).fontSize(12).lineHeight(19).fontColor($r('app.color.muted')).width('100%')
+            Text('何时放弃 · ' + item.reject).fontSize(12).lineHeight(19).fontColor($r('app.color.muted')).width('100%')
+            if (this.strategyRuleKey) {
+              Text('本条规则 · ' + targetName(this.strategySampleProfile(item.id).targetMode) +
+                (this.strategySampleProfile(item.id).evidence.length ? '；依据：' + this.strategySampleProfile(item.id).evidence.map((e: string) => evidenceName(e)).join('、') : '；旧规则将在再次匹配时补充样式记录'))
+                .fontSize(11).lineHeight(18).fontColor($r('app.color.accent')).width('100%')
+              if (this.strategySampleProfile(item.id).layers.length) {
+                Text('组成 · ' + this.strategySampleProfile(item.id).layers.map((layer: ProfileLayer) => layerName(layer.role) + ' ' + layer.type).join(' · '))
+                  .fontSize(10).lineHeight(17).fontColor($r('app.color.muted')).width('100%')
+              }
+            }
+          }.id('quietstart-strategy-' + item.id).padding(16).borderRadius(18).backgroundColor($r('app.color.surface')).width('100%')
+        }, (item: RecognitionStrategy) => item.id)
+        Button(this.strategyWordsOpen ? '收起按钮用词' : '按钮用词 · 自定义').width('100%').height(40)
+          .backgroundColor($r('app.color.soft')).fontColor($r('app.color.accent')).onClick(() => { this.strategyWordsOpen = !this.strategyWordsOpen; })
+        if (this.strategyWordsOpen) {
         Row() {
           Text(this.strategyRules.length + ' 项文字条件').fontSize(17).fontColor($r('app.color.ink')).layoutWeight(1)
           Button('新增').height(32).enabled(this.strategyRules.length < 128).backgroundColor($r('app.color.soft'))
@@ -1047,6 +1264,7 @@ struct Index {
             .onClick(() => { this.rulePacks?.resetLocalRules(); this.refreshRulePack(); this.rulePackMessage = '已恢复内置条件'; })
         }
       }
+      }
       if (this.rulePackMessage) { Text(this.rulePackMessage).id('quietstart-strategy-status').fontSize(13).fontColor($r('app.color.accent')).width('100%') }
     }.padding({ top: 8, bottom: 12 }).width('100%')
   }
@@ -1059,8 +1277,24 @@ struct Index {
         this.sectionLabel('自动识别')
         Row({ space: 12 }) {
           Column({ space: 5 }) {
+            Text('规则自动启用').fontSize(16).fontColor($r('app.color.ink'))
+            Text('仅作用于以后自动识别的新规则；手动识别直接启用').fontSize(12).fontColor($r('app.color.muted'))
+          }.layoutWeight(1).alignItems(HorizontalAlign.Start)
+          Toggle({ type: ToggleType.Switch, isOn: this.autoEnableRules }).id('quietstart-auto-enable-rules')
+            .selectedColor($r('app.color.accent')).onChange((value: boolean) => { this.setAutoEnable(value); })
+        }.padding(16).width('100%').borderRadius(18).backgroundColor($r('app.color.surface'))
+        Row({ space: 12 }) {
+          Column({ space: 5 }) {
+            Text('新规则通知').fontSize(16).fontColor($r('app.color.ink'))
+            Text('保存成功后提醒，点击直达规则页').fontSize(12).fontColor($r('app.color.muted'))
+          }.layoutWeight(1).alignItems(HorizontalAlign.Start)
+          Toggle({ type: ToggleType.Switch, isOn: this.newRuleReminders }).id('quietstart-new-rule-reminder')
+            .selectedColor($r('app.color.accent')).onChange((value: boolean) => { this.setNewRuleReminder(value); })
+        }.padding(16).width('100%').borderRadius(18).backgroundColor($r('app.color.surface'))
+        Row({ space: 12 }) {
+          Column({ space: 5 }) {
             Text('学习新规则').fontSize(16).fontColor($r('app.color.ink'))
-            Text('新样式需确认后生效').fontSize(12).fontColor($r('app.color.muted'))
+            Text('已有规则保留，继续发现新样式').fontSize(12).fontColor($r('app.color.muted'))
           }.layoutWeight(1).alignItems(HorizontalAlign.Start)
           Toggle({ type: ToggleType.Switch, isOn: this.learningEnabled }).id('quietstart-learning-toggle')
             .selectedColor($r('app.color.accent')).onChange((value: boolean) => { this.setLearning(value); })
@@ -1150,10 +1384,10 @@ struct Index {
         this.sectionLabel('识别策略')
         Column({ space: 12 }) {
           Row() {
-            Text('广告识别策略').fontSize(16).fontColor($r('app.color.ink')).layoutWeight(1)
+            Text('广告识别方式').fontSize(16).fontColor($r('app.color.ink')).layoutWeight(1)
           }.width('100%')
-          Text(this.rulePackCount + ' 项文字条件 · ' + (this.strategyCustom ? '本机已修改' : '使用内置条件')).fontSize(12).fontColor($r('app.color.muted')).width('100%')
-          Button('查看与编辑条件').id('quietstart-pack-manage').height(38).width('100%')
+          Text('S01–S08 · 示例、识别依据与点击位置').fontSize(12).fontColor($r('app.color.muted')).width('100%')
+          Button('查看识别策略').id('quietstart-pack-manage').height(38).width('100%')
             .backgroundColor($r('app.color.soft')).fontColor($r('app.color.accent')).onClick(() => { this.openStrategy(); })
           if (this.rulePackMessage) {
             Text(this.rulePackMessage).id('quietstart-pack-status').fontSize(12).lineHeight(19).fontColor($r('app.color.muted')).width('100%')
@@ -1168,6 +1402,8 @@ struct Index {
           }.width('100%')
         }.padding(16).width('100%').borderRadius(18).backgroundColor($r('app.color.surface'))
         Text('轻启' + (this.appVersion ? ' ' + this.appVersion : '') + ' · 数据仅保存在本机').fontSize(11).fontColor($r('app.color.muted')).width('100%').textAlign(TextAlign.Center)
+        Button('运行诊断与退出记录').id('quietstart-exit-records').height(40).width('100%')
+          .backgroundColor($r('app.color.soft')).fontColor($r('app.color.accent')).onClick(() => { this.detail = 'health'; })
       }.padding({ left: 20, right: 20, top: 12, bottom: this.tabContentBottomSpace }).width('100%').constraintSize({ maxWidth: 620 })
     }.align(Alignment.Top).width('100%').height('100%')
   }
@@ -1186,7 +1422,14 @@ struct Index {
       if (this.advanced) {
         Text('最近心跳：' + this.timeLabel(this.debugStatus.heartbeatAt)).id('quietstart-session-heartbeat')
           .fontSize(12).fontColor($r('app.color.muted')).width('100%')
-        Text('结束连接将停止跳过；临时暂停可用总开关。')
+        Text('最近接口响应：' + this.timeLabel(this.debugStatus.rpcAt)).id('quietstart-session-rpc')
+          .fontSize(12).fontColor($r('app.color.muted')).width('100%')
+        Text(this.debugStatus.supervisorToken ? '自动恢复已配置 · 已用 ' + this.debugStatus.recoveryAttempt + '/3 次' : '当前连接未配置自动恢复')
+          .id('quietstart-supervision-summary').fontSize(12).fontColor($r('app.color.muted')).width('100%')
+        if (this.supervisionNotice) { Text(this.supervisionNotice).fontSize(12).lineHeight(20).fontColor($r('app.color.warning')).width('100%') }
+        Button('查看退出记录').height(32).width('100%').fontSize(12).backgroundColor($r('app.color.soft'))
+          .fontColor($r('app.color.accent')).onClick(() => { this.detail = 'health'; })
+        Text('结束连接将同时停止自动恢复；临时暂停可用总开关。')
           .fontSize(12).lineHeight(20).fontColor($r('app.color.muted')).width('100%')
         Button('结束本次连接').id('quietstart-end-session').height(40).width('100%')
           .backgroundColor($r('app.color.soft')).fontColor($r('app.color.warning')).onClick(() => { this.endSession(); })
@@ -1241,9 +1484,9 @@ struct Index {
   recordsPage() {
     Column({ space: 14 }) {
       Row({ space: 12 }) {
-        this.metric(this.debugStatus.observedDismissedCount.toString(), '确认消失')
-        this.metric(this.debugStatus.clickCount.toString(), '尝试点击')
-        this.metric(this.debugStatus.unverifiedCount.toString(), '未能确认')
+        StatMetric({ value: this.debugStatus.observedDismissedCount.toString(), label: '确认消失' })
+        StatMetric({ value: this.debugStatus.clickCount.toString(), label: '尝试点击' })
+        StatMetric({ value: this.debugStatus.unverifiedCount.toString(), label: '未能确认' })
       }.padding(16).width('100%').backgroundColor($r('app.color.surface')).borderRadius(18)
       Text('连续两次未再看到广告控件，计入确认消失；未确认不代表失败。')
         .fontSize(12).lineHeight(20).fontColor($r('app.color.muted')).width('100%')
@@ -1306,8 +1549,17 @@ struct Index {
           .backgroundColor($r('app.color.accent')).fontColor($r('app.color.on_accent'))
           .onClick(() => { this.releaseQuietApp(this.editingBundle); })
       }
+      Column({ space: 10 }) {
+        Text('强化学习').fontSize(16).fontWeight(FontWeight.Medium).fontColor($r('app.color.ink')).width('100%')
+        Text('自动打开应用；系统询问时请选择“打开”。手动关闭广告后，将返回并显示结果。').fontSize(13).lineHeight(20).fontColor($r('app.color.muted')).width('100%')
+        Text('等待最多 60 秒；新规则直接启用，原有规则保留。').fontSize(12).lineHeight(18).fontColor($r('app.color.muted')).width('100%')
+        Button(this.manualActive ? '取消本次学习' : '开始强化学习').id('quietstart-manual-learn').width('100%').height(44)
+          .backgroundColor($r('app.color.accent')).fontColor($r('app.color.on_accent'))
+          .onClick(() => { if (this.manualActive) { this.learningStore?.cancelManualLearning(); this.notice = '已取消本次学习。'; this.refresh(); } else { this.startManualLearning(); } })
+        if (this.manualMessage) { Text(this.manualMessage).fontSize(12).lineHeight(18).fontColor($r('app.color.accent')).width('100%') }
+      }.padding(16).width('100%').borderRadius(18).backgroundColor($r('app.color.surface'))
       Button('查看规则').id('quietstart-app-rules').width('100%').height(40).fontColor($r('app.color.accent'))
-        .backgroundColor($r('app.color.soft')).onClick(() => { this.ruleBundle = this.editingBundle; this.showAllRules = true; this.go(2); })
+        .backgroundColor($r('app.color.soft')).onClick(() => { this.ruleQuery = this.appName(this.editingBundle); this.showAllRules = true; this.go(2); })
       Button(this.renameOpen ? '收起备注名编辑' : '修改备注名').id('quietstart-edit-app-name').height(40).width('100%')
         .backgroundColor($r('app.color.soft')).fontColor($r('app.color.accent')).onClick(() => { this.renameOpen = !this.renameOpen; })
       if (this.renameOpen) {
@@ -1436,7 +1688,7 @@ struct Index {
             }.height(36).alignItems(VerticalAlign.Center).justifyContent(FlexAlign.Center).padding({ left: 8, right: 8 })
           }.id('quietstart-detail-back').height(36).backgroundColor(Color.Transparent).borderRadius(18)
             .onClick(() => { if (this.detail === 'strategy' && this.strategyEdit >= 0) { this.strategyEdit = -1; } else { this.detail = ''; } })
-          Text(this.detail === 'strategy' ? (this.strategyEdit >= 0 ? '编辑识别条件' : '识别策略') : this.detail === 'activation' ? '本机连接' : (this.detail === 'records' ? '运行记录' : (this.detail === 'app' ? '应用管理' : '使用指南')))
+          Text(this.detail === 'health' ? '运行诊断' : this.detail === 'strategy' ? (this.strategyEdit >= 0 ? '编辑识别条件' : '识别策略') : this.detail === 'activation' ? '本机连接' : (this.detail === 'records' ? '运行记录' : (this.detail === 'app' ? '应用管理' : '使用指南')))
             .fontSize(20).fontWeight(FontWeight.Bold).fontColor($r('app.color.ink')).layoutWeight(1)
         }.padding({ left: 12, right: 20, top: 8, bottom: 8 }).width('100%')
         if (this.notice) { Text(this.notice).fontSize(12).fontColor($r('app.color.accent')).padding({ left: 20, right: 20, bottom: 8 }).width('100%') }
@@ -1446,6 +1698,7 @@ struct Index {
             else if (this.detail === 'records') { this.recordsPage(); }
             else if (this.detail === 'app') { this.appDetailPage(); }
             else if (this.detail === 'strategy') { this.strategyPage(); }
+            else if (this.detail === 'health') { this.healthPage(); }
             else { this.helpPage(); }
           }.width('100%').padding({ left: 20, right: 20, top: 8, bottom: 32 }).constraintSize({ maxWidth: 620 })
         }.align(Alignment.Top).width('100%').layoutWeight(1)
