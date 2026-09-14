@@ -2,6 +2,8 @@ import { fileIo as fs } from '@kit.CoreFileKit';
 export class Settings {
   enabled: boolean = false;
   remindersEnabled: boolean = false;
+  newRuleRemindersEnabled: boolean = true;
+  autoEnableRules: boolean = false;
   reminderDismissSeconds: number = 5;
   themeMode: string = 'system';
   discoverApps: boolean = true;
@@ -34,6 +36,8 @@ export class LocalStore {
       const value: Settings = raw;
       value.enabled = raw.enabled === true;
       value.remindersEnabled = raw.remindersEnabled === true;
+      value.newRuleRemindersEnabled = raw.newRuleRemindersEnabled !== false;
+      value.autoEnableRules = raw.autoEnableRules === true;
       value.reminderDismissSeconds = Number.isInteger(raw.reminderDismissSeconds) && raw.reminderDismissSeconds >= 0 &&
         raw.reminderDismissSeconds <= 60 ? raw.reminderDismissSeconds : 5;
       value.themeMode = raw.themeMode === 'light' || raw.themeMode === 'dark' ? raw.themeMode : 'system';

@@ -89,7 +89,7 @@ function baseFixture(options = {}) {
       }
     }
   };
-  state.setSettings({ enabled: true, packages: [HUYA, YOUKU], testUntil: 0, discoverApps: true, ignoredPackages: [], remindersEnabled: false, learningEnabled: true, stopRequested: false, catalogRequestAt: 0 });
+  state.setSettings({ enabled: true, packages: [HUYA, YOUKU], testUntil: 0, discoverApps: true, ignoredPackages: [], remindersEnabled: false, newRuleRemindersEnabled: true, autoEnableRules: false, learningEnabled: true, stopRequested: false, catalogRequestAt: 0 });
   options.configure?.(state);
 
   const fileIo = {
@@ -227,7 +227,8 @@ function baseFixture(options = {}) {
     setTimeout(callback, ms) { state.advance(ms); callback(); return 1; }
   };
   const localStore = load('entry/src/main/ets/core/LocalStore.ets', { '@kit.CoreFileKit': { fileIo } }, globals);
-  const learningStore = load('entry/src/main/ets/core/LearningStore.ets', { '@kit.CoreFileKit': { fileIo } }, globals);
+  const profile = load('entry/src/main/ets/core/RecognitionProfile.ets', {}, globals);
+  const learningStore = load('entry/src/main/ets/core/LearningStore.ets', { './RecognitionProfile': profile, '@kit.CoreFileKit': { fileIo } }, globals);
   const rules = load('entry/src/ohosTest/ets/worker/Rules.ets', { '../../../main/ets/core/LearningStore': learningStore }, globals);
   if (options.approvedInitialRules) {
     // Existing-user fixtures start with explicit saved approvals. Production
@@ -250,7 +251,8 @@ function baseFixture(options = {}) {
       state.files.set(DIRECTORY + '/rule-decisions.json', JSON.stringify(decisions));
     }
   }
-  const kit = { ON: new Selector(), MatchPattern: { CONTAINS: 'contains', EQUALS: 'equals', REG_EXP_ICASE: 'regexInsensitive' },
+  driver.createUIEventObserver = () => ({ once(type, kind, options, callback) { state.manualCallback = callback; state.manualTimeout = options.timeout; } });
+  const kit = { ComponentEventType: { COMPONENT_CLICKED: 1 }, ON: new Selector(), MatchPattern: { CONTAINS: 'contains', EQUALS: 'equals', REG_EXP_ICASE: 'regexInsensitive' },
     Driver: { create: () => options.nullDriver ? null : driver } };
   const rulePack = load('entry/src/main/ets/core/RulePack.ets', {}, globals);
   const builtinPack = load('entry/src/main/ets/core/BuiltinRulePack.ets', { './RulePack': rulePack }, globals);
@@ -259,7 +261,9 @@ function baseFixture(options = {}) {
   }, globals);
   const snapshot = load('entry/src/ohosTest/ets/worker/SnapshotLayout.ets', {'@kit.TestKit': kit, '../../../main/ets/core/LearningStore': learningStore}, globals);
   const structural = load('entry/src/ohosTest/ets/worker/StructuralExperience.ets', { '@kit.TestKit': kit, '../../../main/ets/core/LearningStore': learningStore, './Rules': rules }, globals);
+  const capture = load('entry/src/ohosTest/ets/worker/ProfileCapture.ets', { './StructuralExperience': structural, '../../../main/ets/core/RecognitionProfile': profile, '../../../main/ets/core/LearningStore': learningStore }, globals);
   const learningWorker = load('entry/src/ohosTest/ets/worker/LearningWorker.ets', {
+    './ProfileCapture': capture,
     './SnapshotLayout': snapshot, './StructuralExperience': structural,
     '@kit.TestKit': kit, '../../../main/ets/core/LearningStore': learningStore, './Rules': rules,
     '../../../main/ets/core/RulePack': rulePack
@@ -271,7 +275,12 @@ function baseFixture(options = {}) {
     './LearningWorker': learningWorker,
     './ImageAdEvidence': { readImageAd: async (_driver, _directory, bounds) => options.onImageAd ? options.onImageAd(state, bounds) : false }
   }, globals);
+  const manual = load('entry/src/ohosTest/ets/worker/ManualLearningWorker.ets', { '@kit.TestKit': kit, '@kit.CoreFileKit': { fileIo }, '../../../main/ets/core/LearningStore': learningStore, './LearningWorker': learningWorker }, globals);
   const worker = load('entry/src/ohosTest/ets/worker/SkipWorker.ets', {
+    '@kit.ArkTS': { process: { pid: 1234 } },
+    './WorkerHealth': load('entry/src/ohosTest/ets/worker/WorkerHealth.ets', { '@kit.CoreFileKit': { fileIo } }, globals),
+    '../../../main/ets/core/SupervisionStore': load('entry/src/main/ets/core/SupervisionStore.ets', { '@kit.CoreFileKit': { fileIo } }, globals),
+    './ManualLearningWorker': manual,
     '../../../main/ets/core/DesktopAppNames': load('entry/src/main/ets/core/DesktopAppNames.ets', {}, globals),
     './VisualRecognition': visual,
     '../../../main/ets/core/RulePackStore': packStore,
@@ -281,7 +290,7 @@ function baseFixture(options = {}) {
     '@kit.BasicServicesKit': { deviceInfo: { sdkApiVersion: options.apiVersion || 24 }, power: { isActive: () => options.screenActive ? options.screenActive(state) : true } },
     '@kit.PerformanceAnalysisKit': { hilog: { info() {}, error() {} } },
     '../../../main/ets/core/AppNameResolver': { AppNameResolver: class { tick() {} close() {} requestSoon() {} } },
-    '../../../main/ets/core/SkipReminder': { SkipReminder: class { async show(name) { state.reminderCalls.push(name); } } },
+    '../../../main/ets/core/SkipReminder': { SkipReminder: class { async showLearned(name, approved) { state.newRuleNotifications = [...(state.newRuleNotifications || []), {name,approved}]; } async show(name) { state.reminderCalls.push(name); } } },
     '../../../main/ets/core/LocalStore': localStore,
     './Rules': rules,
     '../../../main/ets/core/LearningStore': learningStore,
@@ -296,6 +305,7 @@ function baseFixture(options = {}) {
     energy: rules,
     driver,
     learningWorker,
+    manualWorker: new manual.ManualLearningWorker(DIRECTORY, options.manualDelegator),
     rulePack, builtinPack, packs: new packStore.RulePackStore(DIRECTORY),
     async run(seconds = 4) {
       const status = await worker.run({ getAppContext: () => ({ filesDir: DIRECTORY }),
@@ -305,13 +315,13 @@ function baseFixture(options = {}) {
           return { exitCode: 0, stdResult: JSON.stringify([{ bundleName: HUYA, label: '虎牙直播' },
             { bundleName: YOUKU, label: '优酷视频' }]) };
         }
-      }, seconds);
+      }, seconds, options.supervisorToken || '', options.recoveryAttempt || 0);
       assert.equal(status.running, false);
       assert.equal(state.timers.size, 0, 'Worker left a heartbeat timer running');
       assert.equal(state.activeApiCalls, 0);
       assert.equal(state.files.has(DIRECTORY + '/dismissal-snapshot.json'), false, 'Temporary UI snapshot must be deleted');
       assert.equal(state.files.has(DIRECTORY + '/discovery-snapshot.json'), false, 'Discovery snapshot must be deleted');
-      if (!options.storageFailure) {
+      if (!options.storageFailure && !options.rejectedSession) {
         const saved = JSON.parse(state.files.get(DIRECTORY + '/debug-status.json'));
         assert.equal(saved.running, false, 'Final persisted status must be offline');
         assert.equal(saved.clickCount, status.clickCount);
@@ -633,7 +643,7 @@ test('zero-duration mode keeps running without a deadline until the user request
 test('a new activation clears only an old stop request and preserves user settings', async () => {
   let clearedDuringRun = false;
   const original = { enabled: false, packages: [YOUKU, 'com.example.saved'], testUntil: 123,
-    stopRequested: true, remindersEnabled: true, themeMode: 'dark', discoverApps: true, ignoredPackages: [], extraSetting: 'keep me', learningEnabled: true, catalogRequestAt: 0, autoAdFree: true, reminderDismissSeconds: 5, adFreeMinDays: 1, adFreeCleanChecks: 5, adFreeRecheckDays: 7 };
+    stopRequested: true, remindersEnabled: true, newRuleRemindersEnabled: true, autoEnableRules: false, themeMode: 'dark', discoverApps: true, ignoredPackages: [], extraSetting: 'keep me', learningEnabled: true, catalogRequestAt: 0, autoAdFree: true, reminderDismissSeconds: 5, adFreeMinDays: 1, adFreeCleanChecks: 5, adFreeRecheckDays: 7 };
   const f = fixture({
     configure(state) { state.setSettings(original); },
     onTime(state) {
@@ -2671,4 +2681,161 @@ test('nonclickable semantic target learns pending and approved rule survives tra
  assert.equal(status.clickCount, 1);
  assert.equal(status.observedDismissedCount, 1);
  assert.equal(f.learningStore.readRules().length, 1);
+});
+
+
+test('new auto rules inherit the setting once; turning it on never overrides rejection', async () => {
+  const f = baseFixture({ configure(s) { s.setSettings({...s.getSettings(), autoEnableRules: true}); } });
+  await f.run();
+  const r=f.learningStore.readRules()[0]; assert.equal(r.autoApproved,true);
+  assert.equal(f.models.ruleState(r,f.learningStore.readDecisions()),'approved');
+  assert.equal(f.state.newRuleNotifications.length,1);
+  f.learningStore.decide(r.key,'rejected');
+  f.learningStore.observe(r,true);
+  assert.equal(f.models.ruleState(f.learningStore.readRules()[0],f.learningStore.readDecisions()),'rejected');
+});
+
+test('manual training appends an enabled rule only after a matching click and two absent observations', async () => {
+  const f=fixture();const old=f.learningStore.readRules().length;
+  f.state.nodes[0].type='Text';f.learningStore.startManualLearning(HUYA);
+  await f.manualWorker.scan(f.driver,HUYA);assert.equal(f.state.manualTimeout,1500);
+  f.state.advance(100);
+  f.state.manualCallback({bundleName:HUYA,type:'Text',text:'跳过',componentId:'huyaSkipButton',windowId:1,componentRect:BUTTON});
+  f.state.nodes=[homeNode(HUYA)];
+  assert.equal(await f.manualWorker.scan(f.driver,HUYA),undefined);
+  f.state.advance(200);
+  const r=await f.manualWorker.scan(f.driver,HUYA);assert.ok(r);
+  assert.equal(r.origin,'manual');assert.equal(f.learningStore.readRules().length,old+1);
+  assert.equal(f.models.ruleState(r,f.learningStore.readDecisions()),'approved');
+  assert.equal(f.manualWorker.active(HUYA),false);
+  assert.equal(f.state.clickCalls.length,0);
+});
+
+test('manual cancellation and leaving target cannot save delayed callbacks', async () => {
+  for(const cancel of [true,false]){
+    const f=fixture();f.state.nodes[0].type='Text';f.learningStore.startManualLearning(HUYA);
+    await f.manualWorker.scan(f.driver,HUYA);const old=f.learningStore.readRules().length;
+    if(cancel)f.learningStore.cancelManualLearning();else await f.manualWorker.scan(f.driver,HOME);
+    f.state.manualCallback({bundleName:HUYA,type:'Text',text:'跳过',componentId:'huyaSkipButton',windowId:1,componentRect:BUTTON});
+    f.state.nodes=[homeNode(HUYA)];
+    await f.manualWorker.scan(f.driver,HUYA);await f.manualWorker.scan(f.driver,HUYA);
+    assert.equal(f.learningStore.readRules().length,old);
+  }
+});
+
+test('manual training expires without clicks and never issues automatic input',async()=>{
+ const f=fixture();f.learningStore.startManualLearning(HUYA);await f.manualWorker.scan(f.driver,HUYA);
+ f.state.advance(60001);await f.manualWorker.scan(f.driver,HUYA);
+ assert.equal(f.manualWorker.active(HUYA),false);assert.equal(f.learningStore.readManualStatus().state,'expired');assert.equal(f.state.clickCalls.length,0);
+});
+
+test('single rule deletion preserves sibling rules, their approval and app settings',()=>{
+ const f=fixture();const before=f.learningStore.readRules();const selected=before.find(r=>r.bundle===HUYA);
+ const sibling={...selected,targetId:'anotherClose',successes:7};sibling.key=f.models.ruleKey(sibling);
+ f.learningStore.saveRules([...before,sibling]);f.learningStore.decide(sibling.key,'approved');
+ const settings=JSON.stringify(f.state.getSettings());f.learningStore.deleteRule(selected.key);
+ const remaining=f.learningStore.readRules();assert.equal(remaining.length,before.length);assert.ok(!remaining.some(r=>r.key===selected.key));
+ assert.equal(remaining.find(r=>r.key===sibling.key).successes,7);
+ assert.equal(f.models.ruleState(remaining.find(r=>r.key===sibling.key),f.learningStore.readDecisions()),'approved');
+ assert.equal(JSON.stringify(f.state.getSettings()),settings);
+});
+test('late saves and old observations cannot restore one deleted rule; a fresh sample needs fresh approval',()=>{
+ const f=fixture();const old=f.learningStore.readRules();const rule=old.find(r=>r.bundle===HUYA);const decisions=f.learningStore.readDecisions();
+ f.learningStore.deleteRule(rule.key);f.learningStore.saveRules(old);f.state.files.set(DIRECTORY+'/rule-decisions.json',JSON.stringify(decisions));
+ assert.ok(!f.learningStore.readRules().some(r=>r.key===rule.key));assert.ok(!f.learningStore.readDecisions().some(d=>d.key===rule.key));
+ assert.equal(f.learningStore.observe(rule),undefined);
+ const deleted=JSON.parse(f.state.files.get(DIRECTORY+'/rule-deletions.json'))[rule.key];
+ assert.equal(f.learningStore.observe({...rule,firstSeen:0,sampledAt:deleted-1}),undefined);
+ f.state.advance(2);const fresh=f.learningStore.observe({...rule,firstSeen:0,sampledAt:deleted+1,attempts:0,successes:0});
+ assert.ok(fresh.firstSeen>deleted);assert.equal(f.models.ruleState(fresh,f.learningStore.readDecisions()),'pending');
+ f.learningStore.outcome(fresh.key,'success',rule.firstSeen);assert.equal(f.learningStore.readRules().find(r=>r.key===rule.key).successes,0);
+});
+test('deleting a rule between discovery and input cancels the pending click',async()=>{
+ let f,deleted=false;
+ f=fixture({apiVersion:26,onLayout(){if(!deleted&&f.state.apiCalls.filter(n=>n==='driver.dumpLayout').length===2){
+  deleted=true;f.learningStore.deleteRule(f.learningStore.readRules().find(r=>r.bundle===HUYA).key);
+ }}});
+ assert.equal((await f.run(2)).clickCount,0);
+});
+
+test('presentation enrichment preserves historical approvals, statistics and rule identity',async()=>{
+ const f=fixture({apiVersion:26}),rules=f.learningStore.readRules(),old=rules.find(r=>r.bundle===HUYA);
+ old.successes=7;old.attempts=9;f.learningStore.saveRules(rules);
+ const beforeDecision=JSON.stringify(f.learningStore.readDecisions());
+ assert.ok(await f.driver.dumpLayout(DIRECTORY+'/profile-enrichment.json'));
+ const layout=f.state.files.get(DIRECTORY+'/profile-enrichment.json');
+ const c=f.learningWorker.discoverSnapshot(layout,HUYA,new f.learningWorker.ScanReport(),undefined,[old]);assert.ok(c);
+ assert.ok(c.rule.profile);const stored=f.learningStore.observe(c.rule);
+ assert.equal(stored.key,old.key);assert.equal(stored.firstSeen,old.firstSeen);assert.equal(stored.successes,7);assert.equal(stored.attempts,9);
+ assert.equal(JSON.stringify(f.learningStore.readDecisions()),beforeDecision);assert.equal(f.models.ruleState(stored,f.learningStore.readDecisions()),'approved');
+ assert.equal((await f.run(2)).clickCount,1);
+});
+test('corrupt presentation data cannot erase an otherwise valid approved rule',()=>{
+ const f=fixture(),rules=f.learningStore.readRules(),key=rules[0].key;rules[0].profile={schema:1,strategyId:'S99',parts:[]};f.learningStore.saveRules(rules);
+ const read=f.learningStore.readRules();assert.equal(read.length,rules.length);const stored=read.find(r=>r.key===key);assert.equal(stored.profile,undefined);
+ assert.equal(f.models.ruleState(stored,f.learningStore.readDecisions()),'approved');
+});
+test('later memory-based observation cannot replace the original learning strategy',async()=>{
+ const f=fixture({apiVersion:26});await f.driver.dumpLayout(DIRECTORY+'/profile-origin.json');
+ const c=f.learningWorker.discoverSnapshot(f.state.files.get(DIRECTORY+'/profile-origin.json'),HUYA,new f.learningWorker.ScanReport());
+ c.rule.profile.strategyId='S07';c.rule.profile.evidence=['image-ocr'];const stored=f.learningStore.observe(c.rule);
+ const next=JSON.parse(JSON.stringify(stored));next.profile.strategyId='S02';next.profile.evidence=['text-countdown'];next.profile.parts[0].text='跳过 3';
+ const updated=f.learningStore.observe(next);assert.equal(updated.profile.strategyId,'S07');
+ assert.ok(updated.profile.evidence.includes('image-ocr'));assert.ok(updated.profile.evidence.includes('text-countdown'));
+ assert.equal(updated.profile.parts[0].text,'跳过 3');assert.equal(updated.key,stored.key);
+});
+
+test('manual flow returns once with a saved result after the foreground UI opens the app', async()=>{
+ const launches=[];const f=fixture({manualDelegator:{startAbility:async(want)=>launches.push(want)}});
+ f.state.nodes[0].type='Text';f.learningStore.startManualLearning(HUYA);
+ await f.manualWorker.scan(f.driver,HUYA);assert.equal(f.learningStore.readManualStatus().state,'listening');assert.equal(launches.length,0);
+ f.state.advance(100);f.state.manualCallback({bundleName:HUYA,type:'Text',text:'跳过',componentId:'huyaSkipButton',windowId:1,componentRect:BUTTON});
+ f.state.nodes=[homeNode(HUYA)];await f.manualWorker.scan(f.driver,HUYA);f.state.advance(200);await f.manualWorker.scan(f.driver,HUYA);
+ assert.equal(f.learningStore.readManualStatus().state,'saved');assert.equal(launches[0].bundleName,f.models.OWN_BUNDLE);
+ await f.manualWorker.scan(f.driver,HUYA);assert.equal(launches.length,1);assert.equal(f.state.clickCalls.length,0);
+});
+test('manual flow returns an unmappable click failure instead of waiting silently',async()=>{
+ const launches=[];const f=fixture({manualDelegator:{startAbility:async(w)=>launches.push(w)}});
+ f.state.nodes[0].type='Text';f.learningStore.startManualLearning(HUYA);await f.manualWorker.scan(f.driver,HUYA);
+ f.state.advance(100);f.state.manualCallback({bundleName:HUYA,type:'Image',text:'',windowId:1,componentRect:{left:1,top:1,right:10,bottom:10}});await f.manualWorker.scan(f.driver,HUYA);
+ const s=f.learningStore.readManualStatus();assert.equal(s.state,'failed');assert.match(s.message,/无法对应唯一/);
+ assert.equal(launches.at(-1).bundleName,f.models.OWN_BUNDLE);assert.equal(f.state.clickCalls.length,0);
+});
+test('manual timeout does not take focus from an unrelated app and result acknowledgements persist',async()=>{
+ const launches=[];const f=fixture({manualDelegator:{startAbility:async(w)=>launches.push(w)}});
+ f.learningStore.startManualLearning(HUYA);await f.manualWorker.scan(f.driver,HUYA);const at=f.learningStore.readManualRequest().at;
+ f.state.advance(60001);await f.manualWorker.scan(f.driver,YOUKU);assert.equal(launches.length,0);
+ assert.equal(f.learningStore.manualResultAcknowledged(at),false);f.learningStore.acknowledgeManualResult(at);assert.equal(f.learningStore.manualResultAcknowledged(at),true);
+});
+
+const HEALTH_TOKEN = '1789400000000';
+test('supervised recovery never clears an already requested stop', async () => {
+  const f = fixture({supervisorToken: HEALTH_TOKEN, configure(s) {
+    s.files.set(DIRECTORY + '/supervision-control.txt', HEALTH_TOKEN + ' active 1000\n');
+    s.setSettings({...s.getSettings(), stopRequested: true});
+  }});
+  await f.run();
+  assert.equal(f.state.getSettings().stopRequested, true);
+  assert.equal(f.state.clickCalls.length, 0);
+  assert.equal(f.state.apiCalls.length, 0);
+});
+test('stopped or superseded supervised worker cannot overwrite a new session', async () => {
+  for (const control of [HEALTH_TOKEN + ' stopped 1000', '1789400000001 active 1000']) {
+    const f = fixture({supervisorToken: HEALTH_TOKEN, rejectedSession: true, configure(s) {
+      s.files.set(DIRECTORY + '/supervision-control.txt', control);
+      s.files.set(DIRECTORY + '/debug-status.json', '{"newSession":true}');
+    }});
+    await f.run();
+    assert.equal(f.state.files.get(DIRECTORY + '/debug-status.json'), '{"newSession":true}');
+    assert.equal(f.state.apiCalls.length, 0);
+    assert.equal(f.state.files.has(DIRECTORY + '/worker-health.txt'), false);
+  }
+});
+test('revoking supervision during target lookup prevents input', async () => {
+  const f = fixture({supervisorToken: HEALTH_TOKEN, configure(s) {
+    s.files.set(DIRECTORY + '/supervision-control.txt', HEALTH_TOKEN + ' active 1000');
+  }, onApi(name,s) {
+    if (name === 'component.isClickable') s.files.set(DIRECTORY + '/supervision-control.txt', HEALTH_TOKEN + ' stopped 1000');
+  }});
+  await f.run(); assert.equal(f.state.clickCalls.length, 0);
 });

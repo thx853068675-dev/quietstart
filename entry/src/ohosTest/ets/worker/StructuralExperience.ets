@@ -27,6 +27,20 @@ function actionable(node: ExperienceNode, window: Rect): boolean {
   for (let p = node.parent; p; p = p.parent) { if (p.a.enabled === 'false') { return false; } }
   return true;
 }
+// A named dismiss receiver can include large invisible touch padding. Keep its
+// identity for matching, but aim at its one live, enabled image child.
+export function dismissImageTarget(target: ExperienceNode, nodes: ExperienceNode[], window: Rect): ExperienceNode | undefined | null {
+  if (!controlIdLabel(target.a.id) || image(target)) { return undefined; }
+  const children = nodes.filter((n: ExperienceNode) => {
+    for (let p = n.parent; p; p = p.parent) { if (p === target) { return true; } }
+    return false;
+  });
+  if (children.length > 12 || children.some((n: ExperienceNode) => !!n.a.text || !!n.a.description)) { return undefined; }
+  const images = children.filter((n: ExperienceNode) => image(n));
+  if (!images.length) { return undefined; }
+  if (images.length !== 1 || !actionable(images[0], window) || !covers(target.box, images[0].box)) { return null; }
+  return images[0];
+}
 export function splashContainer(node: ExperienceNode, window: Rect): ExperienceNode | undefined {
   for (let p = node.parent; p; p = p.parent) {
     const words = (p.a.id ?? '').replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase().split(/[^a-z0-9]+/);

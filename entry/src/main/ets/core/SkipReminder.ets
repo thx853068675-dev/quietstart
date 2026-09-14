@@ -61,6 +61,26 @@ export class SkipReminder {
     if (this.busy) { if (!preview) { this.pendingReal = true; } return; }
     await this.publish(preview);
   }
+  async showLearned(app: string, approved: boolean): Promise<void> {
+    try {
+      const config = new LocalStore(this.directory).readSettings();
+      if (!config.newRuleRemindersEnabled || !await notificationManager.isNotificationEnabled()) { return; }
+      const action = await wantAgent.getWantAgent({
+        wants: [{ bundleName: 'com.tonghongxiang.quietstart', abilityName: 'EntryAbility',
+          parameters: { quietstartOpenRules: true } }],
+        operationType: wantAgent.OperationType.START_ABILITY, requestCode: 70603,
+        wantAgentFlags: [wantAgent.WantAgentFlags.UPDATE_PRESENT_FLAG]
+      });
+      if (!new LocalStore(this.directory).readSettings().newRuleRemindersEnabled) { return; }
+      await notificationManager.publish({ id: 70603, notificationSlotType: notificationManager.SlotType.SERVICE_INFORMATION,
+        isAlertOnce: true, tapDismissed: true, wantAgent: action,
+        autoDeletedTime: config.reminderDismissSeconds === 0 ? 0 : Date.now() + config.reminderDismissSeconds * 1000,
+        notificationFlags: { soundEnabled: 2, vibrationEnabled: 2, lockScreenEnabled: 2 },
+        content: { contentType: 0, normal: { title: '学会一种新样式',
+          text: app.slice(0, 48) + (approved ? ' · 规则已启用' : ' · 等待确认启用'), additionalText: '点击查看规则' } } });
+      if (!new LocalStore(this.directory).readSettings().newRuleRemindersEnabled) { await notificationManager.cancel(70603); }
+    } catch (_) { /* Notification permission never prevents rule persistence. */ }
+  }
   async refreshVisible(): Promise<void> {
     if (!new LocalStore(this.directory).readSettings().remindersEnabled) { return; }
     try {

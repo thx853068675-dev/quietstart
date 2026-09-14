@@ -26,7 +26,7 @@ function fixture(prepare) {
   assert.equal(alg,'RSA3072|PSS|SHA512|MGF1_SHA512');return {init:async()=>{},setSignSpec:(k,v)=>assert.equal(v,64),sign:async()=>({data:bytes('signature')})}
  },SignSpecItem:{PSS_SALT_LEN_NUM:103}};
  const io={OpenMode:{},accessSync:p=>files.has(p),readTextSync:p=>{if(!files.has(p))throw Error('missing');return files.get(p)},openSync:p=>({fd:p}),writeSync:(p,t)=>files.set(p,t),closeSync:()=>{},renameSync:(p,q)=>{files.set(q,files.get(p));files.delete(p)}};
- const {LocalActivation}=load('LocalActivation',{'@kit.NetworkKit':{socket:api},'@kit.CryptoArchitectureKit':{cryptoFramework:crypto},'@kit.ArkTS':{util:{TextEncoder:Encoder,TextDecoder:Decoder,Base64Helper:Base64}},'@kit.CoreFileKit':{fileIo:io},'@kit.BasicServicesKit':{},'@kit.PerformanceAnalysisKit':{hilog:{info(){}}},'./DebugStore':{DebugStore,isDebugOnline:s=>s.running},'./LocalStore':{LocalStore},'./HdcProtocol':protocol});
+ const {LocalActivation}=load('LocalActivation',{'@kit.NetworkKit':{socket:api},'@kit.CryptoArchitectureKit':{cryptoFramework:crypto},'@kit.ArkTS':{util:{TextEncoder:Encoder,TextDecoder:Decoder,Base64Helper:Base64}},'@kit.CoreFileKit':{fileIo:io},'@kit.BasicServicesKit':{osAccount:{getAccountManager:()=>({getOsAccountLocalId:async()=>100})}},'@kit.PerformanceAnalysisKit':{hilog:{info(){}}},'./DebugStore':{DebugStore,isDebugOnline:s=>s.running},'./LocalStore':{LocalStore},'./HdcProtocol':protocol,'./SupervisorProgram':load('SupervisorProgram'),'./SupervisionStore':load('SupervisionStore',{'@kit.CoreFileKit':{fileIo:io}}),'./SystemExitStore':load('SystemExitStore',{'@kit.CoreFileKit':{fileIo:io},'./DebugStore':{DebugStore}})});
  const {OnboardingStore}=load('OnboardingStore',{'@kit.CoreFileKit':{fileIo:io}});
  const instance=new LocalActivation('/private',prepare);
  async function receive(type,body) {
@@ -54,8 +54,9 @@ test('local activation connects only to loopback, authenticates, and sends only 
  await f.receiveClose();
  const commands=f.sends.filter(p=>p.command===1001);assert.equal(commands.length,1);
  const command=Buffer.from(commands[0].data).toString();
- assert.match(command,/^\/bin\/nohup \/bin\/setsid \/bin\/sh -c 'echo QuietStartChildReady; sleep 2; aa force-stop com\.tonghongxiang\.quietstart; echo QuietStartOldProcessStopped; aa test /);
- assert.match(command,/-s seconds 0 -w 3/);assert.ok(command.endsWith('echo QuietStartLocalScheduled; wait'));assert.ok(!command.includes('\0'));assert.ok(!command.includes('192.168'));
+ assert.match(command,/^umask 077; mkdir -p \/data\/local\/tmp\/quietstart-supervisor/);
+ assert.ok(command.includes(Buffer.from(load('SupervisorProgram').SUPERVISOR_PROGRAM).toString('base64')));
+ assert.match(load('SupervisorProgram').SUPERVISOR_PROGRAM,/-s seconds 0 -s supervisor/);assert.ok(command.endsWith('echo QuietStartLocalScheduled; wait'));assert.ok(!command.includes('\0'));assert.ok(!command.includes('192.168'));
  assert.equal(f.settings.stopRequested,false);assert.deepEqual(f.settings.packages,['com.example.saved']);
  assert.equal(f.instance.readState().success,false);
 });
@@ -182,7 +183,7 @@ test('installation uses the same authenticated socket without blocking the recei
  for(let i=0;i<8;i++)await Promise.resolve();
  assert.equal(prepared,true);
  const command=f.sends.find(p=>p.channel===101&&p.command===1001);
- assert.ok(command);assert.ok(!Buffer.from(command.data).toString().includes('2>&1'));
+ assert.ok(command);assert.match(Buffer.from(command.data).toString(),/quietstart-supervisor/);
  assert.equal(f.instance.readState().success,false,'command dispatch is not a live heartbeat');
 });
 test('failed installation never starts the worker or marks activation successful',async()=>{
@@ -193,4 +194,44 @@ test('failed installation never starts the worker or marks activation successful
  assert.ok(!f.sends.some(p=>p.channel===101&&p.command===1001));
  assert.equal(f.closed(),true);assert.equal(f.instance.readState().success,false);
  assert.match(f.instance.readState().message,/permission denied/);
+});
+
+test('replacement install is detached, bounded, and must be verified after reopening', async () => {
+  const hash='a'.repeat(64);
+  const f=fixture(async shell=>{await shell.installWorker(hash);return false;});
+  await f.instance.activate('41907');await f.receiveAuthorizedAndClose();
+  for(let i=0;i<8;i++)await Promise.resolve();
+  const state=f.instance.readState();assert.equal(state.installHash,hash);assert.equal(state.installToken,String(state.startedAt));
+  assert.equal(state.success,false);assert.equal(state.phase,'installing');
+  const commands=f.sends.filter(p=>p.command===1001).map(p=>Buffer.from(p.data).toString());
+  assert.equal(commands.length,1);assert.match(commands[0],/\/bin\/timeout 45 bm install/);assert.match(commands[0],/quietstartInstallResume [0-9]+/);
+  assert.ok(!commands[0].includes('aa test'),'installation dispatch alone cannot start the worker');
+  const stale={...state,startedAt:Date.now()-100000,commandAt:Date.now()-100000};
+  f.files.set('/private/local-activation.json',JSON.stringify(stale));
+  assert.equal(f.instance.readState().phase,'error');assert.ok(f.instance.readState().finishedAt>0);
+});
+
+test('the actual generated install job records success only after bm succeeds and always reopens the app', async () => {
+  const os=require('node:os'), cp=require('node:child_process');
+  const hash='b'.repeat(64);const f=fixture(async shell=>{await shell.installWorker(hash);return false;});
+  await f.instance.activate('41907');await f.receiveAuthorizedAndClose();for(let i=0;i<8;i++)await Promise.resolve();
+  const command=Buffer.from(f.sends.find(p=>p.command===1001).data).toString();
+  const raw=command.match(/\/bin\/sh -c ' (.*) ' <\/dev\/null/s)[1];
+  const directory=fs.mkdtempSync(path.join(os.tmpdir(),'quietstart-install-job-'));
+  try {
+    const bin=path.join(directory,'bin'), target=path.join(directory,'job');fs.mkdirSync(bin);fs.mkdirSync(target);
+    fs.writeFileSync(path.join(bin,'bm'),'#!/bin/sh\n[ -p /dev/stdout ] || exit 0\nprintf "%s\\n" "$MOCK_OUTPUT"\nexit "$MOCK_EXIT"\n',{mode:0o755});
+    fs.writeFileSync(path.join(bin,'aa'),'#!/bin/sh\nprintf "%s\\n" "$*" > "$AA_LOG"\n',{mode:0o755});
+    // Only the timeout executable, initial delay and staging directory differ;
+    // the shell control flow under test is the production-generated script.
+    const body=raw.replaceAll('/data/local/tmp/quietstart-worker-'+hash.slice(0,12),target).replace('/bin/timeout 45 ','').replace('sleep 1;','sleep 0;');
+    for(const [code,output,success] of [[0,'install bundle successfully.',true],[1,'install bundle successfully.',false],[0,'error: install failed',false],[0,'unexpected result',false],[124,'',false]]) {
+      fs.writeFileSync(path.join(target,'installed.sha256'),'stale');fs.writeFileSync(path.join(target,'worker.hap'),'payload');
+      cp.execFileSync('/bin/sh',['-c',body],{env:{...process.env,PATH:bin+':'+process.env.PATH,MOCK_EXIT:String(code),MOCK_OUTPUT:output,AA_LOG:path.join(directory,'return.log')}});
+      assert.equal(fs.existsSync(path.join(target,'installed.sha256')),success);
+      if(success)assert.equal(fs.readFileSync(path.join(target,'installed.sha256'),'utf8').trim(),hash);
+      assert.equal(fs.existsSync(path.join(target,'worker.hap')),false);
+      assert.match(fs.readFileSync(path.join(directory,'return.log'),'utf8'),/quietstartInstallResume/);
+    }
+  } finally {fs.rmSync(directory,{recursive:true,force:true});}
 });

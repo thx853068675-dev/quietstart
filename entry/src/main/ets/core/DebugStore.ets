@@ -15,6 +15,13 @@ export class DebugStatus {
   startedAt: number = 0;
   expiresAt: number = 0;
   heartbeatAt: number = 0;
+  progressAt: number = 0;
+  rpcAt: number = 0;
+  inputAt: number = 0;
+  operation: string = '';
+  operationAt: number = 0;
+  supervisorToken: string = '';
+  recoveryAttempt: number = 0;
   lastBundle: string = '';
   state: string = 'idle';
   message: string = '尚未收到调试会话状态，请先完成本机无线激活。';
@@ -37,9 +44,18 @@ function safeText(value: string): string {
 
 export function isDebugOnline(status: DebugStatus, now: number = Date.now()): boolean {
   const age: number = now - status.heartbeatAt;
-  return status.running === true && status.heartbeatAt > 0 && age >= 0 && age <= 6000 &&
+  const responsive = !status.supervisorToken || (status.rpcAt > 0 && status.progressAt > 0 &&
+    (status.state === 'sleeping' || (now >= status.rpcAt && now >= status.progressAt && now - status.rpcAt <= 30000 && now - status.progressAt <= 30000)));
+  return responsive && status.running === true && status.heartbeatAt > 0 && age >= 0 && age <= 6000 &&
     Number.isFinite(status.expiresAt) && status.expiresAt >= 0 &&
     (status.expiresAt === 0 || now < status.expiresAt);
+}
+
+// A fresh manual UI launch after the final recovery died may not receive the
+// supervisor's Want (for example while locked). Do not hide that spent budget.
+export function exhaustedRecovery(status: DebugStatus, token: string, now: number = Date.now()): boolean {
+  return token.length > 0 && status.supervisorToken === token && status.recoveryAttempt >= 3 &&
+    (!status.running || now - status.heartbeatAt > 30000);
 }
 
 export class DebugStore {
@@ -62,6 +78,10 @@ export class DebugStore {
       status.startedAt = nonnegative(raw.startedAt);
       status.expiresAt = nonnegative(raw.expiresAt);
       status.heartbeatAt = nonnegative(raw.heartbeatAt);
+      status.progressAt = nonnegative(raw.progressAt); status.rpcAt = nonnegative(raw.rpcAt);
+      status.inputAt = nonnegative(raw.inputAt); status.operation = safeText(raw.operation);
+      status.operationAt = nonnegative(raw.operationAt); status.supervisorToken = safeText(raw.supervisorToken);
+      status.recoveryAttempt = nonnegative(raw.recoveryAttempt);
       status.lastBundle = safeText(raw.lastBundle);
       status.state = safeText(raw.state) || 'idle';
       status.message = safeText(raw.message) || status.message;

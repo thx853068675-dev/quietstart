@@ -3,10 +3,13 @@ import hashlib, pathlib, re, zipfile
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 TOP={'README.md','LICENSE','THIRD_PARTY_NOTICES.md','SECURITY.md','CONTRIBUTING.md','.gitignore','build-profile.example.json5','code-linter.json5','hvigorfile.ts','oh-package.json5','oh-package-lock.json5'}
 DIRS={'AppScope','entry','hvigor','rules','scripts','tests','tools','docs'}
-PUBLIC_DOCS={'ARCHITECTURE.md','BUILD.md','INSTALL.md','RESIGN.md','RELEASING.md','TESTING.md','USAGE.md',
+PUBLIC_DOCS={'ARCHITECTURE.md','BUILD.md','INSTALL.md','RESIGN.md','RELEASING.md','TESTING.md','USAGE.md','LIFECYCLE.md','RECOGNITION.md',
              'share-to-users-guide.md','single-package-0.9.42.md','community-learning-0.9.40.md',
              'community-structural-before-0.9.40.json','community-structural-results-0.9.40.json'}
-PUBLIC_SCREENSHOTS={'overview.jpeg','connection.jpeg','apps.jpeg','rules.jpeg','records.jpeg','settings.jpeg','preferences.jpeg'}
+PUBLIC_SCREENSHOTS={'overview.jpeg','connection.jpeg','apps.jpeg','rules.jpeg','records.jpeg','settings.jpeg','preferences.jpeg',
+ 'manual-learning-945.jpeg','manual-learning-948.jpeg','manual-result-948.jpeg','manual-rule-945.jpeg',
+ 'mgtv-rule-948.jpeg','mgtv-rule-949.jpeg','recognition-strategies-947.jpeg','rules-948.jpeg','rules-950.jpeg',
+ 'rules-951.jpeg','settings-945.jpeg'}
 BLOCK={'build','oh_modules','node_modules','.hvigor','.idea','__pycache__','.git','dist','.cxx','.preview','.test'}
 EXT={'.hap','.app','.pem','.key','.p12','.p7b','.cer','.csr','.jks','.keystore','.pyc','.zip','.log','.pfx'}
 selected=[]

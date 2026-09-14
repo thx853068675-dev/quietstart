@@ -1,3 +1,4 @@
+import { ManualLearningWorker } from './ManualLearningWorker';
 import { desktopAppNames } from '../../../main/ets/core/DesktopAppNames';
 import { VisualRecognition } from './VisualRecognition';
 import { RulePackStore } from '../../../main/ets/core/RulePackStore';
@@ -12,6 +13,9 @@ import { LocalStore } from '../../../main/ets/core/LocalStore';
 import { runtimeAppLabel, LearnedRule, LearningStore, OWN_BUNDLE, ruleState, sameRuleGeometry, validBundle, discoverableBundle } from '../../../main/ets/core/LearningStore';
 import { findLearnedCandidate, discoverSnapshot, soleVisibleAppBundle, SnapshotCandidate, LearnedCandidate, learnedTargetState, snapshotTargetState, AdMarkerEvidence, readCandidateLabel, ScanReport } from './LearningWorker';
 import { ENTRY_WINDOW_MS, MAX_RUN_SECONDS, isSplashButton, scanInterval } from './Rules';
+import { process } from '@kit.ArkTS';
+import { SupervisionStore } from '../../../main/ets/core/SupervisionStore';
+import { WorkerHealth } from './WorkerHealth';
 
 const TAG: string = 'QuietStartWorker';
 
@@ -48,6 +52,13 @@ export class DebugStatus {
   startedAt: number = 0;
   expiresAt: number = 0;
   heartbeatAt: number = 0;
+  progressAt: number = 0;
+  rpcAt: number = 0;
+  inputAt: number = 0;
+  operation: string = '';
+  operationAt: number = 0;
+  supervisorToken: string = '';
+  recoveryAttempt: number = 0;
   lastBundle: string = '';
   state: string = 'idle';
   message: string = '';
@@ -63,17 +74,20 @@ export class DebugStatus {
 // Only one instance should be launched in an aa test run. UiTest calls below
 // are all awaited serially; the heartbeat timer performs file writes only.
 export async function run(delegator: abilityDelegatorRegistry.AbilityDelegator,
-  runSeconds: number): Promise<DebugStatus> {
+  runSeconds: number, supervisorToken: string = '', recoveryAttempt: number = 0): Promise<DebugStatus> {
   if (!Number.isFinite(runSeconds) || runSeconds < 0 || (runSeconds > 0 && runSeconds < 1) ||
     runSeconds > MAX_RUN_SECONDS) {
     throw new Error('SkipWorker requires runSeconds to be 0, or at least 1 and at most 43200.');
   }
   const directory: string = delegator.getAppContext().filesDir;
-  const worker: SkipWorker = new SkipWorker(directory, runSeconds, delegator);
+  const worker: SkipWorker = new SkipWorker(directory, runSeconds, delegator, supervisorToken, recoveryAttempt);
   return await worker.run();
 }
 
 class SkipWorker {
+  private health: WorkerHealth;
+  private supervision: SupervisionStore;
+  private manual: ManualLearningWorker;
   private visual: VisualRecognition;
   private status: DebugStatus = new DebugStatus();
   private store: LocalStore;
@@ -124,8 +138,14 @@ class SkipWorker {
   private screenActive: boolean = true;
   private recordedBundle: string = '';
 
-  constructor(directory: string, runSeconds: number, delegator: abilityDelegatorRegistry.AbilityDelegator) {
+  constructor(directory: string, runSeconds: number, delegator: abilityDelegatorRegistry.AbilityDelegator,
+    supervisorToken: string, recoveryAttempt: number) {
+    this.health = new WorkerHealth(directory, supervisorToken, process.pid);
+    this.supervision = new SupervisionStore(directory);
+    this.status.supervisorToken = supervisorToken;
+    this.status.recoveryAttempt = recoveryAttempt;
     this.directory = directory;
+    this.manual = new ManualLearningWorker(directory, delegator);
     this.visual = new VisualRecognition(directory);
     this.delegator = delegator;
     this.store = new LocalStore(directory);
@@ -139,14 +159,14 @@ class SkipWorker {
   }
 
   async run(): Promise<DebugStatus> {
+    if (this.health.token && !this.supervision.allows(this.health.token)) { return this.status; }
     this.status.running = true;
     this.setState('initializing', '正在初始化官方 UiTest 调试会话');
     try {
       // A new activation clears the previous session's stop request while
       // preserving the user's switch, whitelist and other settings.
       const settings = this.store.readSettings();
-      settings.stopRequested = false;
-      this.store.saveSettings(settings);
+      if (!this.health.token) { settings.stopRequested = false; this.store.saveSettings(settings); }
       this.saveStatus();
       this.heartbeatTimer = setInterval(() => {
         try {
@@ -160,14 +180,17 @@ class SkipWorker {
       if (!driver) { throw new Error('Official UiTest Driver initialization returned null'); }
       while (!this.isExpired() && !this.storageFailed) {
         try {
-          if (this.store.readSettings().stopRequested === true) {
+          if (this.store.readSettings().stopRequested === true ||
+            (this.health.token && !this.supervision.allows(this.health.token))) {
             if (this.verificationBundle) {
               this.finishUnverified('用户结束会话，尚未完成验证');
             }
             this.setState('finished', '用户已结束本次调试会话');
             return this.status;
           }
+          this.health.begin('scan');
           await this.scan(driver);
+          this.health.progress(!this.screenActive);
           if (this.screenActive) { this.names.tick(); }
         } catch (error) {
           this.cleanSamples = 0; this.cleanFirstAt = 0; this.cleanLastAt = 0;
@@ -186,13 +209,16 @@ class SkipWorker {
           }
           this.setState(this.verificationBundle ? 'verifying' : 'waiting', '界面切换中，等待稳定后重新检查');
         }
-        const interval: number = this.status.state === 'watching' ? scanInterval(Date.now() - (this.sessionUntil - ENTRY_WINDOW_MS)) :
+        const interval: number = this.manual.hasActiveRequest() ? 150 : this.status.state === 'watching' ? scanInterval(Date.now() - (this.sessionUntil - ENTRY_WINDOW_MS)) :
           (this.status.state === 'verifying' ? 200 : (this.status.state === 'sleeping' ? 1000 : 500));
         const remaining: number = this.status.expiresAt === 0 ? interval : this.status.expiresAt - Date.now();
         if (remaining > 0 && !this.storageFailed) {
           if (this.status.state === 'sleeping') {
             await new Promise<void>((resolve) => { setTimeout(resolve, Math.min(interval, remaining)); });
-          } else { await driver.delayMs(Math.min(interval, remaining)); }
+          } else {
+            this.health.begin('delay');
+            await driver.delayMs(Math.min(interval, remaining));
+          }
         }
       }
       if (!this.storageFailed && this.status.state !== 'error') {
@@ -211,6 +237,7 @@ class SkipWorker {
         this.heartbeatTimer = -1;
       }
       this.status.running = false;
+      this.health.begin('ended');
       try {
         this.saveStatus();
       } catch (error) {
@@ -234,6 +261,7 @@ class SkipWorker {
     }
     const focusedWindow = await foregroundWindow(driver, this.directory);
     const bundle: string = focusedWindow ? await focusedWindow.getBundleName() : '';
+    this.health.rpc();
     this.status.lastBundle = bundle;
     if (bundle === 'com.ohos.sceneboard' && !this.desktopMetadataVisited) {
       // One bounded attempt per desktop visit, never a timed screenshot loop.
@@ -263,6 +291,16 @@ class SkipWorker {
       this.names.requestSoon();
     } else if (!discoverableBundle(bundle)) { this.recordedBundle = ''; }
 
+    const manualRule = await this.manual.scan(driver, bundle);
+    if (manualRule) {
+      this.adFree.evidence(bundle); this.learning.recordSeenApp(bundle);
+      this.record(bundle, 'learned', '手动点击已确认，规则已保存并直接启用');
+      this.reminder.showLearned(this.learning.displayName(bundle), true).catch(() => {});
+    }
+    if (this.manual.active(bundle)) {
+      this.cleanEligible = false; this.sessionAttempted = true;
+      this.setState('watching', '强化学习中：由你点击关闭，暂不自动操作'); return;
+    }
     if (this.verificationBundle) {
       await this.verifyDismissal(driver, bundle);
       return;
@@ -336,7 +374,9 @@ class SkipWorker {
     this.record(bundle, 'attempt', '已核对前台、应用选择、广告依据和已学习的按钮位置；匹配 ' + matchMs +
       ' ms，复核 ' + (Date.now() - matchStartedAt - matchMs) + ' ms，发现前台至点击 ' +
       (Date.now() - (this.sessionUntil - ENTRY_WINDOW_MS)) + ' ms');
+    this.health.begin('input'); this.health.save();
     await candidate.click();
+    this.health.input();
     this.status.clickCount += 1;
     this.record(bundle, 'clickSent', 'UiTest 点击调用成功，等待检查广告是否消失');
     this.verificationStartedAt = Date.now();
@@ -349,12 +389,15 @@ class SkipWorker {
   }
 
   private allowedBySettings(bundle: string): boolean {
+    if (this.health.token && !this.supervision.allows(this.health.token)) { return false; }
     if (!validBundle(bundle) || bundle === OWN_BUNDLE) {
       return false;
     }
     const settings = this.store.readSettings();
     return settings.enabled === true && settings.stopRequested !== true && !settings.ignoredPackages.includes(bundle) &&
-      Array.isArray(settings.packages) && settings.packages.includes(bundle);
+      Array.isArray(settings.packages) && (settings.packages.includes(bundle) ||
+        this.learning.readRules().some((r: LearnedRule) => r.bundle === bundle && r.autoApproved === true &&
+          ruleState(r, this.learning.readDecisions()) === 'approved'));
   }
 
   private mayDiscover(bundle: string): boolean {
@@ -393,8 +436,14 @@ class SkipWorker {
     if ((!this.allowedBySettings(bundle) && !this.mayDiscover(bundle)) || Date.now() > this.sessionUntil) { return false; }
     if (this.mayDiscover(bundle) && !this.observedKeys.includes(rule.key)) {
       this.observedKeys.push(rule.key);
-      const stored = this.learning.observe(rule);
-      if (stored && ruleState(stored, this.learning.readDecisions()) === 'pending') {
+      const isNew = !this.learning.readRules().some((r: LearnedRule) => r.key === rule.key);
+      const stored = this.learning.observe(rule, settings.autoEnableRules);
+      if (stored && isNew) {
+        const approved = ruleState(stored, this.learning.readDecisions()) === 'approved';
+        this.reminder.showLearned(this.learning.displayName(bundle), approved).catch(() => {});
+        if (approved) { this.record(bundle, 'learned', '发现新样式，已按设置自动启用'); }
+      }
+      if (stored && isNew && ruleState(stored, this.learning.readDecisions()) === 'pending') {
         this.diagnose(bundle, '已保存新规则，请到规则页确认启用');
         this.record(bundle, 'learned', '发现新跳过样式，已保存到规则页，确认启用后才会点击');
       }
@@ -581,8 +630,10 @@ class SkipWorker {
     // Consume the opportunity only when calling input. An uncertain input error
     // must not trigger a second tap; record the dispatched attempt even on error.
     try {
+      this.health.begin('input'); this.health.save();
       await driver.click(Math.round((fresh.bounds.left + fresh.bounds.right) / 2),
         Math.round((fresh.bounds.top + fresh.bounds.bottom) / 2));
+      this.health.input();
       inputMs = Date.now() - clickStarted;
       this.status.clickCount += 1;
       this.verificationStartedAt = Date.now();
@@ -770,7 +821,11 @@ class SkipWorker {
   }
 
   private saveStatus(): void {
+    this.health.save();
     this.status.heartbeatAt = Date.now();
+    this.status.progressAt = this.health.progressAt; this.status.rpcAt = this.health.rpcAt;
+    this.status.inputAt = this.health.inputAt; this.status.operation = this.health.operation;
+    this.status.operationAt = this.health.operationAt;
     const path: string = this.directory + '/debug-status.json';
     const file: fs.File = fs.openSync(path + '.tmp', fs.OpenMode.CREATE | fs.OpenMode.WRITE_ONLY | fs.OpenMode.TRUNC);
     try {
