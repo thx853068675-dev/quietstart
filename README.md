@@ -6,6 +6,8 @@ HarmonyOS 原生开屏广告辅助工具。在本机识别广告按钮、学习�
 
 ## 讨论群组
 QQ群: 1125359809
+<img width="1284" height="2283" alt="image" src="https://github.com/user-attachments/assets/06f91e87-3d29-400b-8fcf-2830af468d55" />
+
 
 ## 安装与使用
 
