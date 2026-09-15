@@ -1,3 +1,4 @@
+import { captureLayout } from './LayoutCapture';
 import { fileIo as fs } from '@kit.CoreFileKit';
 import { Driver } from '@kit.TestKit';
 import { RecognitionPack } from '../../../main/ets/core/RulePack';
@@ -88,7 +89,7 @@ export class VisualRecognition {
               // OCR proves advertising text in the layer, never the coordinates used for input.
               // Re-read geometry after OCR and require the same target/window in both trees.
               report.coordinateReadAt = Date.now();
-              const currentLayout = await driver.dumpLayout(path) ? fs.readTextSync(path) : '';
+              const currentLayout = await captureLayout(driver, path) ? fs.readTextSync(path) : '';
               const current = currentLayout ? discoverSnapshot(currentLayout, bundle, report, pack) : undefined;
               const signature = imageLayoutSignature(layout, region);
               if (pictured && current && signature && signature === imageLayoutSignature(currentLayout, region) && Date.now() - imageAt <= 1500 && pictured.windowId === current.windowId &&

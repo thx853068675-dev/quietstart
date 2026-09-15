@@ -1,3 +1,6 @@
+import { captureLayout, closeLayoutConnection, LAYOUT_READ_INTERRUPTED } from './LayoutCapture';
+import { stressBuild, consumeSupervisionStress } from '../../../main/ets/core/SupervisionStressProbe';
+import { SystemExitStore, WorkerFailure } from '../../../main/ets/core/SystemExitStore';
 import { ManualLearningWorker } from './ManualLearningWorker';
 import { desktopAppNames } from '../../../main/ets/core/DesktopAppNames';
 import { VisualRecognition } from './VisualRecognition';
@@ -18,22 +21,37 @@ import { SupervisionStore } from '../../../main/ets/core/SupervisionStore';
 import { WorkerHealth } from './WorkerHealth';
 
 const TAG: string = 'QuietStartWorker';
+const SAVED_LAYOUT_READ_MS: number = 1100;
+const SAVED_LAYOUT_POST_MS: number = 150;
+const SAVED_LAYOUT_TOTAL_MS: number = SAVED_LAYOUT_READ_MS + SAVED_LAYOUT_POST_MS;
 
 // A non-focusable splash can be the active interactive window while no focused
 // window is exposed by UiTest. If both filters return nothing, validate the
 // sole visible app in a new complete display snapshot, then reacquire its window.
 // Repeat this before input and after verification; never use a saved app name.
-async function foregroundWindow(driver: Driver, directory: string): Promise<UiWindow | undefined> {
+class ForegroundFrame {
+  bundle: string = '';
+  text: string = '';
+  readAt: number = 0;
+  readyAt: number = 0;
+}
+async function foregroundWindow(driver: Driver, directory: string, frame?: ForegroundFrame, allowSnapshot: boolean = true): Promise<UiWindow | undefined> {
   const focused = await driver.findWindow({ focused: true });
   if (focused) { return focused; }
   const active = await driver.findWindow({ active: true });
-  if (active || deviceInfo.sdkApiVersion < 26) { return active; }
+  if (active) { return active; }
+  if (!allowSnapshot) { return undefined; }
   const path = directory + '/foreground-snapshot.json';
   try { fs.unlinkSync(path); } catch (_) {}
   try {
-    if (!await driver.dumpLayout(path)) { return undefined; }
-    const bundle = soleVisibleAppBundle(fs.readTextSync(path));
-    return bundle ? await driver.findWindow({ bundleName: bundle }) : undefined;
+    const readAt = Date.now();
+    if (!await captureLayout(driver, path)) { return undefined; }
+    const text = fs.readTextSync(path);
+    const readyAt = Date.now();
+    const bundle = soleVisibleAppBundle(text);
+    const window = bundle ? await driver.findWindow({ bundleName: bundle }) : undefined;
+    if (frame && window && bundle) { frame.bundle = bundle; frame.text = text; frame.readAt = readAt; frame.readyAt = readyAt; }
+    return window;
   } finally { try { fs.unlinkSync(path); } catch (_) {} }
 }
 
@@ -136,6 +154,12 @@ class SkipWorker {
   private cleanFinished: boolean = false;
   private nextPowerCheckAt: number = 0;
   private screenActive: boolean = true;
+  private allowStress: boolean = stressBuild();
+  private journalAt: number = 0;
+  private layoutReadFailures: number = 0;
+  private transitionScanUntil: number = 0;
+  private foregroundFrame: ForegroundFrame = new ForegroundFrame();
+  private foregroundNeedsSnapshot: boolean = false;
   private recordedBundle: string = '';
 
   constructor(directory: string, runSeconds: number, delegator: abilityDelegatorRegistry.AbilityDelegator,
@@ -172,6 +196,7 @@ class SkipWorker {
         try {
           this.saveStatus();
         } catch (error) {
+          if (this.storageFailed) { return; }
           this.storageFailed = true;
           this.reportError(error as BusinessError, '状态文件写入失败');
         }
@@ -188,16 +213,31 @@ class SkipWorker {
             this.setState('finished', '用户已结束本次调试会话');
             return this.status;
           }
+          if (this.health.token && this.screenActive && Date.now() - this.journalAt > 60000) {
+            this.journalAt = Date.now();
+            try {
+              const journal = await this.delegator.executeShellCommand('cat /data/local/tmp/quietstart-supervisor/supervisor-events.jsonl', 1);
+              if (journal.exitCode === 0) { new SystemExitStore(this.directory).importSupervisorEvents(journal.stdResult, this.health.token); }
+            } catch (_) {}
+          }
+          this.health.begin('session-control');
+          if (this.allowStress) { await consumeSupervisionStress(this.directory, this.health.token); }
           this.health.begin('scan');
           await this.scan(driver);
+          this.layoutReadFailures = 0;
           this.health.progress(!this.screenActive);
           if (this.screenActive) { this.names.tick(); }
         } catch (error) {
           this.cleanSamples = 0; this.cleanFirstAt = 0; this.cleanLastAt = 0;
           const failure = error as BusinessError;
+          if (failure.code === LAYOUT_READ_INTERRUPTED && ++this.layoutReadFailures <= 2) {
+            this.learningProbe = undefined; this.cleanEligible = false;
+            this.reportError(failure, '布局读取中断，连接已释放；等待下一帧重建', false);
+            await driver.delayMs(80); continue;
+          }
           if (failure.code !== 17000004) {
             this.finishUnverified('UiTest 接口失败，无法完成验证');
-            this.reportError(failure, 'UiTest 接口失败，已停止本次点击会话');
+            this.reportError(failure, '工作会话发生异常，已停止本次点击会话');
             break;
           }
           // Window/component references can expire while the user changes apps.
@@ -209,8 +249,9 @@ class SkipWorker {
           }
           this.setState(this.verificationBundle ? 'verifying' : 'waiting', '界面切换中，等待稳定后重新检查');
         }
-        const interval: number = this.manual.hasActiveRequest() ? 150 : this.status.state === 'watching' ? scanInterval(Date.now() - (this.sessionUntil - ENTRY_WINDOW_MS)) :
-          (this.status.state === 'verifying' ? 200 : (this.status.state === 'sleeping' ? 1000 : 500));
+        const interval: number = this.manual.hasActiveRequest() ? 150 :
+          (this.screenActive && Date.now() < this.transitionScanUntil ? 80 : this.status.state === 'watching' ? scanInterval(Date.now() - (this.sessionUntil - ENTRY_WINDOW_MS)) :
+          (this.status.state === 'verifying' ? 200 : (this.status.state === 'sleeping' ? 1000 : 500)));
         const remaining: number = this.status.expiresAt === 0 ? interval : this.status.expiresAt - Date.now();
         if (remaining > 0 && !this.storageFailed) {
           if (this.status.state === 'sleeping') {
@@ -228,10 +269,11 @@ class SkipWorker {
         this.setState('finished', '本次限时调试会话已结束');
       }
     } catch (error) {
-      this.reportError(error as BusinessError, 'UiTest 接口失败，已停止本次点击会话');
+      this.reportError(error as BusinessError, '工作会话发生异常，已停止本次点击会话');
     } finally {
       this.finishObservation('检测会话结束，检查未完成');
       this.names.close();
+      closeLayoutConnection();
       if (this.heartbeatTimer !== -1) {
         clearInterval(this.heartbeatTimer);
         this.heartbeatTimer = -1;
@@ -259,11 +301,27 @@ class SkipWorker {
       if (this.verificationBundle) { this.finishUnverified('设备已灭屏，停止界面读取'); }
       this.setState('sleeping', '屏幕已关闭，暂停窗口和广告扫描'); return;
     }
-    const focusedWindow = await foregroundWindow(driver, this.directory);
-    const bundle: string = focusedWindow ? await focusedWindow.getBundleName() : '';
+    this.health.begin('foreground');
+    const foregroundStarted = Date.now();
+    this.foregroundFrame = new ForegroundFrame();
+    // During the first second without focus, query lightweight window state
+    // again instead of exporting the launcher/animation tree repeatedly.
+    const manualEventMode = deviceInfo.sdkApiVersion >= 22 && deviceInfo.sdkApiVersion < 26 && this.manual.hasActiveRequest();
+    const allowFallback = !manualEventMode && (deviceInfo.sdkApiVersion >= 26 || this.foregroundNeedsSnapshot ||
+      (this.transitionScanUntil > 0 && Date.now() >= this.transitionScanUntil - 1000));
+    const focusedWindow = await foregroundWindow(driver, this.directory,
+      deviceInfo.sdkApiVersion < 26 ? this.foregroundFrame : undefined, allowFallback);
+    const bundle: string = focusedWindow ? await focusedWindow.getBundleName() : (manualEventMode ? this.manual.eventBundle() : '');
     this.health.rpc();
+    this.foregroundNeedsSnapshot = !!this.foregroundFrame.bundle;
+    const foregroundMs = Date.now() - foregroundStarted;
+    if (foregroundMs > 250) { hilog.info(0, TAG, 'slow foreground ms=%{public}d bundle=%{public}s', foregroundMs, bundle); }
+    // Launch transitions briefly have no focused/active app. Avoid another
+    // half-second idle wait, but retain normal idle and screen-off cadence.
+    if (!bundle && this.transitionScanUntil === 0) { this.transitionScanUntil = Date.now() + 2000; }
+    else if (bundle) { this.transitionScanUntil = 0; }
     this.status.lastBundle = bundle;
-    if (bundle === 'com.ohos.sceneboard' && !this.desktopMetadataVisited) {
+    if (!manualEventMode && bundle === 'com.ohos.sceneboard' && !this.desktopMetadataVisited) {
       // One bounded attempt per desktop visit, never a timed screenshot loop.
       this.desktopMetadataVisited = true;
       await this.readDesktopNames(driver);
@@ -280,7 +338,7 @@ class SkipWorker {
       this.sessionAttempted = false;
       this.observedKeys = [];
       this.learningProbe = undefined;
-      this.cleanEligible = deviceInfo.sdkApiVersion >= 26 && this.store.readSettings().autoAdFree &&
+      this.cleanEligible = this.store.readSettings().autoAdFree &&
         !this.learning.readRules().some((rule: LearnedRule) => rule.bundle === bundle);
       this.cleanSamples = 0; this.cleanFirstAt = 0; this.cleanLastAt = 0; this.cleanFinished = false;
     }
@@ -291,6 +349,7 @@ class SkipWorker {
       this.names.requestSoon();
     } else if (!discoverableBundle(bundle)) { this.recordedBundle = ''; }
 
+    this.health.begin('manual-learning');
     const manualRule = await this.manual.scan(driver, bundle);
     if (manualRule) {
       this.adFree.evidence(bundle); this.learning.recordSeenApp(bundle);
@@ -333,7 +392,7 @@ class SkipWorker {
       return;
     }
     this.setState('watching', '正在检查此应用的开屏广告控件');
-    if (deviceInfo.sdkApiVersion >= 26) {
+    if (deviceInfo.sdkApiVersion >= 20) {
       await this.scanSnapshot(driver, bundle);
       return;
     }
@@ -419,6 +478,7 @@ class SkipWorker {
     }
     const report = new ScanReport();
     const matchStarted = Date.now();
+    this.health.begin('legacy-recognition');
     const found = await findLearnedCandidate(driver, bundle, await window.getBounds(), report);
     if (!found) {
       if (this.observedKeys.length === 0) { this.diagnose(bundle, report.reason); }
@@ -469,18 +529,34 @@ class SkipWorker {
     const path = this.directory + '/discovery-snapshot.json';
     try { fs.unlinkSync(path); } catch (_) {}
     try {
+      const decisions = this.learning.readDecisions();
+      const approved = this.learning.readRules().filter((rule: LearnedRule) => rule.bundle === bundle && ruleState(rule, decisions) === 'approved');
+      const pack = this.rulePacks.read();
       report.reason = '界面读取：系统未返回有效布局';
       report.collectTrace = this.candidateTraceSession !== bundle + ':' + this.sessionUntil;
       report.imageMarker = undefined; report.imageRegions = []; report.candidateTrace = '';
-      report.coordinateReadAt = Date.now();
-      const layout = await driver.dumpLayout(path) ? fs.readTextSync(path) : '';
-      const decisions = this.learning.readDecisions();
-      const approved = this.learning.readRules().filter((rule: LearnedRule) => rule.bundle === bundle && ruleState(rule, decisions) === 'approved');
-      let candidate = layout ? discoverSnapshot(layout, bundle, report, this.rulePacks.read(), approved) : undefined;
+      const frame = this.foregroundFrame; this.foregroundFrame = new ForegroundFrame();
+      const reuseForeground = deviceInfo.sdkApiVersion < 26 && frame.bundle === bundle && !!frame.text &&
+        Date.now() - frame.readyAt <= 75 && frame.readyAt - frame.readAt <= SAVED_LAYOUT_READ_MS;
+      report.coordinateReadAt = reuseForeground ? frame.readAt : Date.now();
+      this.health.begin('discovery-layout');
+      const layout = reuseForeground ? frame.text : (await captureLayout(driver, path) ? fs.readTextSync(path) : '');
+      report.coordinateReadyAt = reuseForeground ? frame.readyAt : Date.now();
+      if (reuseForeground) { hilog.info(0, TAG, 'reuse current foreground layout bundle=%{public}s age=%{public}d', bundle, Date.now() - frame.readyAt); }
+      this.health.begin('recognition');
+      // Both backends produce a current full tree. Select an approved button
+      // before discovery; API 26 retains its native capture and tighter read limit.
+      const fastRules = approved.filter((rule: LearnedRule) => !!rule.profile && !!rule.buttonType);
+      let candidate = layout && fastRules.length ?
+        discoverSnapshot(layout, bundle, report, pack, fastRules, true) : undefined;
+      report.approvedSnapshot = !!candidate?.approvedButton && !!candidate?.approvedRuleKey;
+      if (report.approvedSnapshot && candidate) { candidate.rule.key = candidate.approvedRuleKey; }
+      if (!candidate) { candidate = layout ? discoverSnapshot(layout, bundle, report, pack, approved) : undefined; }
       if (report.androidBridge && !this.recordedAndroidApps.includes(bundle)) {
         this.learning.recordAndroidApp(bundle); this.recordedAndroidApps.push(bundle);
       }
       if (!candidate && report.imageRegions.length) {
+        this.health.begin('visual-recognition');
         candidate = await this.visual.discover(driver, bundle, layout, path, report, this.rulePacks.read(),
           bundle + ':' + this.sessionUntil, (rule: LearnedRule) => this.approvedMatch(rule));
       }
@@ -488,7 +564,7 @@ class SkipWorker {
         this.candidateTraceSession = bundle + ':' + this.sessionUntil;
         try { this.learning.saveCandidateTrace(bundle, report.candidateTrace); } catch (_) {}
       }
-      if (candidate || report.adEvidence) { this.cleanEligible = false; this.adFree.evidence(bundle); }
+      if (candidate || report.adEvidence) { this.cleanEligible = false; if (!report.approvedSnapshot) { this.adFree.evidence(bundle); } }
       if (!report.cleanPage) { this.cleanSamples = 0; this.cleanFirstAt = 0; this.cleanLastAt = 0; }
       if (report.cleanPage && this.cleanEligible) {
         const now = Date.now();
@@ -530,7 +606,8 @@ class SkipWorker {
     report.imageMarker = undefined; report.imageRegions = []; report.collectTrace = false;
     try {
       report.coordinateReadAt = Date.now();
-      const captured = await driver.dumpLayout(path);
+      this.health.begin('click-preflight-layout');
+      const captured = await captureLayout(driver, path);
       report.coordinateReadyAt = Date.now();
       const layout = captured ? fs.readTextSync(path) : '';
       const candidate = layout ? discoverSnapshot(layout, bundle, report, this.rulePacks.read(), [saved], true) : undefined;
@@ -543,9 +620,16 @@ class SkipWorker {
     const postMs = Date.now() - report.coordinateReadyAt;
     const totalMs = Date.now() - report.coordinateReadAt;
     const timing = '（读取 ' + captureMs + ' ms，读取后复核 ' + postMs + ' ms，总计 ' + totalMs + ' ms）';
-    if (captureMs > 700) { return '界面读取超过 700 ms' + timing; }
-    if (postMs > 300) { return '读取后复核超过 300 ms' + timing; }
-    if (totalMs > 800) { return '读取与复核总计超过 800 ms' + timing; }
+    // Saved-button execution tolerates a slower platform export but strictly
+    // bounds processing after its return. This is a freshness budget, not
+    // a promise about visual onset or input completion time.
+    const saved = report.approvedSnapshot;
+    const readLimit = saved && deviceInfo.sdkApiVersion < 26 ? SAVED_LAYOUT_READ_MS : 700;
+    const postLimit = saved && deviceInfo.sdkApiVersion < 26 ? SAVED_LAYOUT_POST_MS : 300;
+    const totalLimit = saved && deviceInfo.sdkApiVersion < 26 ? SAVED_LAYOUT_TOTAL_MS : 800;
+    if (captureMs > readLimit) { return '界面读取超过 ' + readLimit + ' ms' + timing; }
+    if (postMs > postLimit) { return '读取后复核超过 ' + postLimit + ' ms' + timing; }
+    if (totalMs > totalLimit) { return '读取与复核总计超过 ' + totalLimit + ' ms' + timing; }
     return '';
   }
 
@@ -570,9 +654,10 @@ class SkipWorker {
     }
     this.pendingObservation = '';
     // New learning needs two successive normal scans; do not add native reads.
-    // Approved targets retain their existing immediate double-snapshot path.
-    this.learning.resolveCandidate(first.rule);
-    if (!this.learning.readRules().some((rule: LearnedRule) => rule.key === first.rule.key)) {
+    // API 24 approved targets can reuse the current validated snapshot.
+    if (!report.approvedSnapshot) { this.learning.resolveCandidate(first.rule); }
+    let confirmedLearningFrame = false;
+    if (!report.approvedSnapshot && !this.learning.readRules().some((rule: LearnedRule) => rule.key === first.rule.key)) {
       const previous = this.learningProbe;
       const age = Date.now() - this.learningProbeAt;
       this.learningProbe = first; this.learningProbeAt = Date.now();
@@ -584,15 +669,21 @@ class SkipWorker {
         Math.abs(previous.bounds.bottom - first.bounds.bottom) > 2) {
         this.diagnose(bundle, '发现新样式，等待下一帧确认后保存'); return;
       }
+      confirmedLearningFrame = true;
     }
-    if (!this.acceptCandidate(bundle, first.rule, Date.now() - started)) { return; }
+    if (!report.approvedSnapshot && !this.acceptCandidate(bundle, first.rule, Date.now() - started)) { return; }
     const matchMs = Date.now() - started;
     // Revalidate only the selected enabled button in a fresh tree.
     // No discovery, rule learning or OCR is permitted on this execution path.
+    hilog.info(0, TAG, 'candidate saved=%{public}s read=%{public}d post=%{public}d', String(report.approvedSnapshot), report.coordinateReadyAt - report.coordinateReadAt, Date.now() - report.coordinateReadyAt);
+    const currentFrame = report.approvedSnapshot || (deviceInfo.sdkApiVersion < 26 && confirmedLearningFrame);
+    if (currentFrame && this.clickSnapshotExpiry(report)) {
+      this.diagnose(bundle, '当前快照已超时：' + this.clickSnapshotExpiry(report) + '，丢弃并等待下一帧'); return;
+    }
     const freshStarted = Date.now();
-    const fresh = await this.readClickTarget(driver, bundle, first.rule, report);
+    const fresh = currentFrame ? first : await this.readClickTarget(driver, bundle, first.rule, report);
     if (!fresh) { this.diagnose(bundle, '点击复核未通过：' + report.reason); return; }
-    this.learning.resolveCandidate(fresh.rule);
+    if (!currentFrame) { this.learning.resolveCandidate(fresh.rule); }
     if (fresh.rule.key !== first.rule.key || !sameRuleGeometry(fresh.rule, first.rule) ||
       fresh.windowId !== first.windowId ||
       Math.abs(fresh.bounds.left - first.bounds.left) > 2 || Math.abs(fresh.bounds.top - first.bounds.top) > 2 ||
@@ -605,9 +696,16 @@ class SkipWorker {
     if (!window || await window.getBundleName() !== bundle) {
       this.diagnose(bundle, '点击复核：前台已切换，取消点击'); return;
     }
+    if (currentFrame) {
+      const bounds = await window.getBounds();
+      if (bounds.left !== fresh.window.left || bounds.top !== fresh.window.top ||
+        bounds.right !== fresh.window.right || bounds.bottom !== fresh.window.bottom) {
+        this.diagnose(bundle, '快速复核：当前窗口范围与快照不同，取消点击'); return;
+      }
+    }
     const expiry = this.clickSnapshotExpiry(report);
     if (expiry) { this.diagnose(bundle, '点击复核：' + expiry + '，未发送点击，稍后重新读取'); return; }
-    if (!this.allowedBySettings(bundle) || !this.approvedMatch(fresh.rule)) {
+    if (currentFrame ? !this.currentApprovalAllows(bundle, fresh.rule) : (!this.allowedBySettings(bundle) || !this.approvedMatch(fresh.rule))) {
       this.diagnose(bundle, !this.allowedBySettings(bundle) ? '点击复核：应用已暂停、总开关关闭或会话已结束，取消点击' :
         '点击复核：规则已删除、停用或重新学习，当前目标未获批准，取消点击'); return;
     }
@@ -642,11 +740,14 @@ class SkipWorker {
         Math.min(Date.now() + 5000, this.status.expiresAt);
       this.absentObservations = 0; this.presentObservations = 0;
     } finally {
+      if (report.approvedSnapshot && !this.observedKeys.includes(fresh.rule.key) && this.mayDiscover(bundle) && this.approvedMatch(fresh.rule)) {
+        this.observedKeys.push(fresh.rule.key); this.learning.observe(fresh.rule, this.store.readSettings().autoEnableRules);
+      }
       this.learning.outcome(fresh.rule.key, 'attempt');
-      this.record(bundle, 'attempt', '双快照匹配 ' + matchMs + ' ms，复核 ' + preflightMs +
+      this.record(bundle, 'attempt', (currentFrame ? (confirmedLearningFrame ? '两帧学习后复用新快照 ' : '已启用规则新快照匹配 ') : '双快照匹配 ') + matchMs + ' ms，复核 ' + preflightMs +
         ' ms（读取 ' + (report.coordinateReadyAt - report.coordinateReadAt) + ' ms，读取后 ' + (clickStarted - report.coordinateReadyAt) + ' ms），发现前台至点击 ' + foregroundMs + ' ms', clickStarted);
     }
-    this.diagnose(bundle, '已匹配启用的学习规则，双快照复核通过；识别 ' + matchMs + ' ms，复核 ' +
+    this.diagnose(bundle, (currentFrame ? '最新布局匹配与当前窗口复核通过；识别 ' : '已匹配启用的学习规则，双快照复核通过；识别 ') + matchMs + ' ms，复核 ' +
       preflightMs + (fresh.approvedButton ? ' ms；已启用按钮匹配，无需广告识别或 OCR；目标「' : fresh.adMarker?.source === 'image-ocr' ? ' ms；广告依据：图片文字识别；目标「' : fresh.adMarker?.source === 'image-memory' ? ' ms；广告依据：已学习布局，无需 OCR；目标「' : ' ms；目标「') + (fresh.rule.example || fresh.rule.label) + '」，点击位置 (' +
       Math.round((fresh.bounds.left + fresh.bounds.right) / 2) + ', ' + Math.round((fresh.bounds.top + fresh.bounds.bottom) / 2) + ')', clickStarted);
     this.record(bundle, 'clickSent', '已点击最新界面中的已确认目标；输入调用 ' + inputMs + ' ms', this.verificationStartedAt);
@@ -659,7 +760,7 @@ class SkipWorker {
     const path = this.directory + '/desktop-names-snapshot.json';
     try {
       try { fs.unlinkSync(path); } catch (_) {}
-      if (!await driver.dumpLayout(path)) { return; }
+      if (!await captureLayout(driver, path)) { return; }
       const layout = fs.readTextSync(path);
       const names = desktopAppNames(layout, bundles);
       for (const bundle of Object.keys(names)) {
@@ -687,6 +788,16 @@ class SkipWorker {
       ' ms · 发现前台后 ' + Math.max(0, eventAt - (this.sessionUntil - ENTRY_WINDOW_MS)) + ' ms';
     this.learning.saveDiagnostic(bundle, detail);
     this.record(bundle, 'decision', detail, eventAt);
+  }
+
+  private currentApprovalAllows(bundle: string, current: LearnedRule): boolean {
+    if ((this.health.token && !this.supervision.allows(this.health.token)) || !validBundle(bundle) || bundle === OWN_BUNDLE) { return false; }
+    const settings = this.store.readSettings();
+    if (!settings.enabled || settings.stopRequested || settings.ignoredPackages.includes(bundle)) { return false; }
+    const saved = this.learning.readRules().find((rule: LearnedRule) => rule.key === current.key);
+    if (!saved || !sameRuleGeometry(saved, current) || ruleState(saved, this.learning.readDecisions()) !== 'approved' ||
+      (!settings.packages.includes(bundle) && !saved.autoApproved)) { return false; }
+    current.firstSeen = saved.firstSeen; return true;
   }
 
   private approvedMatch(current: LearnedRule): boolean {
@@ -726,12 +837,12 @@ class SkipWorker {
     }
     let observation: string = 'unknown';
     let livePage: boolean = false;
-    if (deviceInfo.sdkApiVersion >= 26) {
+    if (deviceInfo.sdkApiVersion >= 20) {
       const path = this.directory + '/dismissal-snapshot.json';
       // Temporary tree stays in the app sandbox and is deleted after each read.
       try { fs.unlinkSync(path); } catch (_) {}
       try {
-        if (await driver.dumpLayout(path)) {
+        if (await captureLayout(driver, path)) {
           observation = snapshotTargetState(fs.readTextSync(path), this.verifyingRule, this.verifyingMarker, this.rulePacks.read());
           livePage = observation !== 'unknown';
         }
@@ -813,11 +924,30 @@ class SkipWorker {
     hilog.info(0x0000, TAG, '%{public}s bundle=%{public}s %{public}s', result, bundle, message);
   }
 
-  private reportError(error: BusinessError, message: string): void {
-    this.status.errorCode = `${error.code}`;
+  private reportError(error: BusinessError, message: string, terminal: boolean = true): void {
+    const failure = new WorkerFailure();
+    failure.at = Date.now(); failure.token = this.health.token; failure.pid = process.pid;
+    failure.sessionStartedAt = this.status.startedAt; failure.recoveryAttempt = this.status.recoveryAttempt;
+    failure.bundle = this.status.lastBundle; failure.operation = this.health.operation;
+    failure.operationAt = this.health.operationAt; failure.heartbeatAt = this.status.heartbeatAt;
+    failure.rpcAt = this.health.rpcAt; failure.apiVersion = deviceInfo.sdkApiVersion;
+    failure.code = error && (typeof error.code === 'number' || typeof error.code === 'string') ? String(error.code) : 'NO_CODE';
+    failure.name = error && typeof error.name === 'string' ? error.name : 'UnknownError';
+    failure.message = error && typeof error.message === 'string' ? error.message : String(error);
+    failure.stack = error && typeof error.stack === 'string' ? error.stack : '';
+    failure.context = message; failure.terminal = terminal;
+    // Persist before changing phase to ended or the next worker replaces status.
+    try { new SystemExitStore(this.directory).recordWorkerFailure(failure); }
+    catch (_) { hilog.error(0x0000, TAG, 'Failed to persist worker failure'); }
+    if (!terminal) {
+      this.setState('waiting', message);
+      this.record(this.status.lastBundle, 'decision', message + '；' + failure.message); return;
+    }
+    this.status.errorCode = failure.code;
     this.setState('error', message);
-    this.record(this.status.lastBundle, 'error', `${message}; code=${error.code}; ${error.message}`);
-    hilog.error(0x0000, TAG, 'code=%{public}s %{public}s', this.status.errorCode, error.message);
+    this.record(this.status.lastBundle, 'error', `${message}; phase=${failure.operation}; code=${failure.code}; ${failure.message}`);
+    hilog.error(0x0000, TAG, 'terminal phase=%{public}s code=%{public}s name=%{public}s message=%{public}s stack=%{public}s',
+      failure.operation, failure.code, failure.name, failure.message, failure.stack);
   }
 
   private saveStatus(): void {

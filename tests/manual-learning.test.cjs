@@ -37,11 +37,22 @@ test('decorative rings without ad marker are not advertised as a real countdown'
  const t=tree('damai');for(const n of all(t))if(n.attributes.text==='广告'){n.attributes.text='';n.attributes.originalText='';}
  assert.equal(worker.discoverSnapshot(JSON.stringify(t),'cn.damai.hongmeng',new worker.ScanReport()),undefined);
 });
-test('bubbled toolbar click resolves its unique evidenced close child, not a full-screen surface',()=>{
+test('user-confirmed toolbar click resolves its unique close child without ad evidence',()=>{
  const {t,bundle}=manual(); const nodes=all(t); const source=nodes.find(n=>n.attributes.type==='__Common__' && n.attributes.bounds==='[0,117][1320,261]');
  assert.ok(source);const a=source.attributes; const event={bundleName:bundle,type:a.type,text:'',windowId:Number(a.hostWindowId),componentId:a.accessibilityId,componentRect:{left:0,top:0,right:1320,bottom:261}};
  const c=worker.manualSnapshot(JSON.stringify(t),bundle,event);assert.ok(c);assert.equal(c.rule.origin,'manual');assert.equal(c.rule.buttonType,'Text');assert.equal(c.bounds.left,1185);
  for(const n of nodes)if(n.attributes.text==='广告'){n.attributes.text='';n.attributes.originalText='';}
- assert.equal(worker.manualSnapshot(JSON.stringify(t),bundle,event),undefined);
+ assert.ok(worker.manualSnapshot(JSON.stringify(t),bundle,event));
  assert.equal(worker.manualSnapshot(JSON.stringify(t),bundle,{...event,componentRect:{left:0,top:0,right:1320,bottom:2120}}),undefined);
+});
+test('manual countdown accepts changing digits but preserves type, geometry and stable identity',()=>{
+ const {t,bundle,event}=manual();const a=all(t).find(n=>n.attributes.text==='跳过').attributes;
+ a.text='5s';a.originalText='5s';const c=worker.manualSnapshot(JSON.stringify(t),bundle,{...event,text:'5s'});assert.ok(c);
+ a.text='3s';a.originalText='3s';assert.ok(worker.manualSnapshot(JSON.stringify(t),bundle,undefined,c.rule));
+ a.text='购买';a.originalText='购买';assert.equal(worker.manualSnapshot(JSON.stringify(t),bundle,undefined,c.rule),undefined);
+});
+test('manual known dismissal tolerates ID churn and small motion without accepting another semantic action',()=>{
+ const {t,bundle,event}=manual();const c=worker.manualSnapshot(JSON.stringify(t),bundle,event);assert.ok(c);
+ const a=all(t).find(n=>n.attributes.text==='跳过').attributes;a.id='new-session-close';
+ a.bounds='[1190,175][1250,210]';const next=worker.manualSnapshot(JSON.stringify(t),bundle,undefined,c.rule);assert.ok(next);assert.equal(next.approvedRuleKey,c.rule.key);
 });

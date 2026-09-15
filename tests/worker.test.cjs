@@ -24,6 +24,7 @@ function load(relative, mocks, globals = {}) {
   vm.runInNewContext(code, {
     exports,
     require(name) {
+      if (name === './LayoutCapture') return {LAYOUT_READ_INTERRUPTED:90057001,captureLayout: (driver,p) => driver.dumpLayout(p), closeLayoutConnection() {}};
       assert.ok(Object.hasOwn(mocks, name), `Unexpected source dependency: ${name}`);
       return mocks[name];
     },
@@ -275,8 +276,10 @@ function baseFixture(options = {}) {
     './LearningWorker': learningWorker,
     './ImageAdEvidence': { readImageAd: async (_driver, _directory, bounds) => options.onImageAd ? options.onImageAd(state, bounds) : false }
   }, globals);
-  const manual = load('entry/src/ohosTest/ets/worker/ManualLearningWorker.ets', { '@kit.TestKit': kit, '@kit.CoreFileKit': { fileIo }, '../../../main/ets/core/LearningStore': learningStore, './LearningWorker': learningWorker }, globals);
+  const manual = load('entry/src/ohosTest/ets/worker/ManualLearningWorker.ets', { '@kit.BasicServicesKit': {deviceInfo:{sdkApiVersion: options.apiVersion || 19}}, '../../../main/ets/core/LocalActivation': {LocalActivation:class {async readAppEntry(b){return (await options.manualDelegator.executeShellCommand('bm dump -n '+b)).stdResult;} async startAppEntry(b,c){return (await options.manualDelegator.executeShellCommand(c)).stdResult;}}}, '../../../main/ets/core/AppLaunch': load('entry/src/main/ets/core/AppLaunch.ets', {}), '@kit.TestKit': kit, '@kit.CoreFileKit': { fileIo }, '../../../main/ets/core/LearningStore': learningStore, './LearningWorker': learningWorker }, globals);
   const worker = load('entry/src/ohosTest/ets/worker/SkipWorker.ets', {
+    '../../../main/ets/core/SupervisionStressProbe': { stressBuild:()=>false, consumeSupervisionStress:async()=>{} },
+    '../../../main/ets/core/SystemExitStore': { WorkerFailure: class {}, SystemExitStore: class { importSupervisorEvents(){} recordWorkerFailure(row){ state.workerFailures = [...(state.workerFailures || []), row]; } } },
     '@kit.ArkTS': { process: { pid: 1234 } },
     './WorkerHealth': load('entry/src/ohosTest/ets/worker/WorkerHealth.ets', { '@kit.CoreFileKit': { fileIo } }, globals),
     '../../../main/ets/core/SupervisionStore': load('entry/src/main/ets/core/SupervisionStore.ets', { '@kit.CoreFileKit': { fileIo } }, globals),
@@ -287,7 +290,7 @@ function baseFixture(options = {}) {
     '../../../main/ets/core/AdFreeStore': adFree,
     '@kit.TestKit': kit,
     '@kit.CoreFileKit': { fileIo },
-    '@kit.BasicServicesKit': { deviceInfo: { sdkApiVersion: options.apiVersion || 24 }, power: { isActive: () => options.screenActive ? options.screenActive(state) : true } },
+    '@kit.BasicServicesKit': { deviceInfo: { sdkApiVersion: options.apiVersion || 19 }, power: { isActive: () => options.screenActive ? options.screenActive(state) : true } },
     '@kit.PerformanceAnalysisKit': { hilog: { info() {}, error() {} } },
     '../../../main/ets/core/AppNameResolver': { AppNameResolver: class { tick() {} close() {} requestSoon() {} } },
     '../../../main/ets/core/SkipReminder': { SkipReminder: class { async showLearned(name, approved) { state.newRuleNotifications = [...(state.newRuleNotifications || []), {name,approved}]; } async show(name) { state.reminderCalls.push(name); } } },
@@ -1380,7 +1383,7 @@ test('API 26 uses coherent snapshots and retains no private tree files', async (
 });
 
 test('pre-26 devices retain the guarded serial verification fallback', async () => {
-  const f = fixture({ apiVersion: 24 });
+  const f = fixture({ apiVersion: 19 });
   assert.equal((await f.run()).observedDismissedCount, 1);
   assert.equal(f.state.apiCalls.includes('driver.dumpLayout'), false);
 });
@@ -2695,15 +2698,12 @@ test('new auto rules inherit the setting once; turning it on never overrides rej
   assert.equal(f.models.ruleState(f.learningStore.readRules()[0],f.learningStore.readDecisions()),'rejected');
 });
 
-test('manual training appends an enabled rule only after a matching click and two absent observations', async () => {
+test('manual training trusts an explicit matching click without waiting for disappearance', async () => {
   const f=fixture();const old=f.learningStore.readRules().length;
   f.state.nodes[0].type='Text';f.learningStore.startManualLearning(HUYA);
   await f.manualWorker.scan(f.driver,HUYA);assert.equal(f.state.manualTimeout,1500);
   f.state.advance(100);
   f.state.manualCallback({bundleName:HUYA,type:'Text',text:'跳过',componentId:'huyaSkipButton',windowId:1,componentRect:BUTTON});
-  f.state.nodes=[homeNode(HUYA)];
-  assert.equal(await f.manualWorker.scan(f.driver,HUYA),undefined);
-  f.state.advance(200);
   const r=await f.manualWorker.scan(f.driver,HUYA);assert.ok(r);
   assert.equal(r.origin,'manual');assert.equal(f.learningStore.readRules().length,old+1);
   assert.equal(f.models.ruleState(r,f.learningStore.readDecisions()),'approved');
@@ -2838,4 +2838,169 @@ test('revoking supervision during target lookup prevents input', async () => {
     if (name === 'component.isClickable') s.files.set(DIRECTORY + '/supervision-control.txt', HEALTH_TOKEN + ' stopped 1000');
   }});
   await f.run(); assert.equal(f.state.clickCalls.length, 0);
+});
+
+test('plain runtime exception preserves name message stack and phase without undefined code',async()=>{
+ const f=fixture({nullDriver:true});const status=await f.run();
+ assert.equal(status.errorCode,'NO_CODE');assert.equal(f.state.workerFailures.length,1);
+ const row=f.state.workerFailures[0];assert.equal(row.name,'Error');assert.match(row.message,/Driver initialization/);
+ assert.match(row.stack,/SkipWorker.run/);assert.equal(row.pid,1234);assert.equal(row.sessionStartedAt,status.startedAt);
+});
+test('API 24 uses full snapshot recognition and strict click revalidation',async()=>{
+ const f=fixture({apiVersion:24});const status=await f.run(4);
+ assert.equal(status.clickCount,1);assert.ok(f.state.apiCalls.filter(n=>n==='driver.dumpLayout').length>=2);
+ assert.equal(f.state.peakApiCalls,1);
+});
+
+test('API 24 approved rules use one fresh tree and a current-window check without finder waits', async () => {
+  let armed=false;
+  const f=learningFixture({apiVersion:24,configure(state){state.nodes[0].type='Button';},onApi(name,state){
+    if(armed && name==='driver.dumpLayout')state.advance(450);
+    if(name==='driver.findComponents')state.advance(1000);
+  }});
+  await observeAndApprove(f);armed=true;f.state.apiCalls.length=0;
+  const result=await f.run(5);assert.equal(result.clickCount,1);assert.equal(result.observedDismissedCount,1);
+  const calls=f.state.apiCalls.slice(0,f.state.apiCalls.indexOf('driver.click'));
+  assert.equal(calls.filter(x=>x==='driver.dumpLayout').length,1);
+  assert.equal(calls.includes('driver.findComponents'),false);
+  assert.ok(result.history.some(x=>x.result==='attempt' && x.message.includes('已启用规则新快照匹配')));
+});
+for(const mutation of ['disabled','moved','overlap','foreground','settings','expired']) {
+  test('API 24 single fresh frame rejects '+mutation, async()=>{
+    let armed=false;
+    const f=learningFixture({apiVersion:24,configure(state){state.nodes[0].type='Button';},onLayout(layout,state){
+      if(!armed)return;
+      if(mutation==='disabled')layout.children[0].attributes.enabled='false';
+      if(mutation==='moved')layout.children[0].attributes.bounds='[10,10][110,60]';
+      if(mutation==='overlap')layout.children.push({attributes:{...layout.children[0].attributes,id:'buy',text:'立即购买'}});
+    },onApi(name,state){
+      if(!armed)return;
+      if(name==='driver.findWindow' && state.apiCalls.includes('driver.dumpLayout')) {
+        if(mutation==='foreground')state.foreground=HOME;
+        if(mutation==='settings')state.setSettings({...state.getSettings(),enabled:false});
+        if(mutation==='expired')state.advance(850);
+      }
+    }});
+    await observeAndApprove(f);armed=true;f.state.apiCalls.length=0;
+    assert.equal((await f.run(4)).clickCount,0);
+  });
+}
+
+for (const failures of [1, 3]) test('API 24 bounded layout interruption recovery: ' + failures, async () => {
+ let reads=0;
+ const f=fixture({apiVersion:24,onLayout(){if(++reads<=failures){const e=new Error('test layout timeout');e.code=90057001;throw e;}}});
+ const r=await f.run(5);
+ assert.equal(f.state.workerFailures.length,failures);
+ assert.equal(f.state.workerFailures[0].terminal,false);
+ if(failures===1){assert.equal(r.clickCount,1);assert.equal(r.errorCode,'');}
+ else {assert.equal(r.clickCount,0);assert.equal(f.state.workerFailures[2].terminal,true);assert.equal(r.errorCode,'90057001');}
+});
+
+test('API 24 auto-approved new style requires two frames and never a third preflight export',async()=>{
+ const f=learningFixture({apiVersion:24,configure(s){s.nodes[0].type='Button';s.setSettings({...s.getSettings(),autoEnableRules:true});}});
+ const r=await f.run(4);assert.equal(r.clickCount,1);
+ const before=f.state.apiCalls.slice(0,f.state.apiCalls.indexOf('driver.click'));
+ assert.equal(before.filter(x=>x==='driver.dumpLayout').length,2);
+ assert.ok(r.history.some(x=>x.result==='attempt'&&x.message.includes('两帧学习后复用新快照')));
+});
+test('API 24 approval deleted after capture cannot click or recreate the rule',async()=>{
+ let armed=false,f;
+ f=learningFixture({apiVersion:24,configure(s){s.nodes[0].type='Button';},onApi(name){
+  if(armed&&name==='window.getBounds'){armed=false;f.learningStore.deleteRule(f.learningStore.readRules()[0].key);}
+ }});
+ await observeAndApprove(f);armed=true;const r=await f.run(1);
+ assert.equal(r.clickCount,0);assert.ok(!f.learningStore.readRules().some(x=>f.models.ruleState(x,f.learningStore.readDecisions())==='approved'));
+});
+
+for (const readMs of [1050, 1120]) test('API 24 saved-rule capture budget '+readMs,async()=>{
+ let armed=false;
+ const f=learningFixture({apiVersion:24,configure(s){s.nodes[0].type='Button';},onApi(name,s){if(armed&&name==='driver.dumpLayout')s.advance(readMs);}});
+ await observeAndApprove(f);armed=true;f.state.apiCalls.length=0;
+ const r=await f.run(4);assert.equal(r.clickCount,readMs===1050?1:0);
+ if(readMs===1120) assert.ok(r.history.some(x=>x.message.includes('1100 ms')));
+});
+
+for (const postMs of [143, 155]) test('API 24 combined saved-frame budget remains consistent with its read and post limits: '+postMs,async()=>{
+ let armed=false;
+ const f=learningFixture({apiVersion:24,configure(s){s.nodes[0].type='Button';},onApi(name,s){
+  if(!armed)return;
+  if(name==='driver.dumpLayout')s.advance(1067);
+  if(name==='window.getBounds' && s.apiCalls.includes('driver.dumpLayout'))s.advance(postMs);
+ }});
+ await observeAndApprove(f);armed=true;f.state.apiCalls.length=0;
+ const r=await f.run(4);assert.equal(r.clickCount,postMs===143?1:0);
+ if(postMs===155)assert.ok(r.history.some(x=>x.message.includes('150 ms')));
+});
+
+test('API 24 reuses the fresh foreground fallback tree for an approved button',async()=>{
+ const f=learningFixture({apiVersion:24,configure(s){s.nodes[0].type='Button';},windowBundle(filter,s){return filter.bundleName?s.foreground:'';}});
+ await observeAndApprove(f);f.state.apiCalls.length=0;
+ const r=await f.run(4);assert.equal(r.clickCount,1);
+ const before=f.state.apiCalls.slice(0,f.state.apiCalls.indexOf('driver.click'));
+ // One foreground discovery plus one independent final-window fallback.
+ // No additional discovery or selected-target tree is exported.
+ assert.equal(before.filter(x=>x==='driver.dumpLayout').length,2);
+});
+
+test('API 24 transient launch focus loss does not export launcher trees during the grace period',async()=>{
+ const reads=[];
+ const f=fixture({apiVersion:24,windowBundle(_filter,s){return s.elapsed<300?'':s.foreground;},onLayout(_layout,s){reads.push(s.elapsed);}});
+ const r=await f.run(4);assert.equal(r.clickCount,1);assert.ok(reads.length>0);assert.ok(reads[0]>=300&&reads[0]<500);
+});
+
+test('manual launch falls back between declared home actions once and confirms foreground arrival',async()=>{
+ const commands=[];const f=fixture({manualDelegator:{executeShellCommand:async(cmd)=>{commands.push(cmd);return {exitCode:0,stdResult:commands.length<=2?'Error Code:10103101':'start ability successfully.'};}}});
+ f.learningStore.startManualLearning(HUYA);await f.manualWorker.scan(f.driver,f.models.OWN_BUNDLE);
+ const at=f.learningStore.readManualRequest().at;f.learningStore.saveManualStatus(at,'launching','');
+ await f.manualWorker.scan(f.driver,f.models.OWN_BUNDLE);assert.equal(commands.length,3);
+ assert.match(commands[1],/action.system.home/);assert.match(commands[2],/ohos.want.action.home/);
+ assert.equal(f.learningStore.readManualStatus().state,'listening');
+ f.state.advance(11000);await f.manualWorker.scan(f.driver,f.models.OWN_BUNDLE);
+ assert.equal(f.learningStore.readManualStatus().state,'failed');assert.match(f.learningStore.readManualStatus().message,/10 秒/);
+ await f.manualWorker.scan(f.driver,f.models.OWN_BUNDLE);assert.equal(commands.length,3);
+});
+test('cancelled manual request cannot launch an application',async()=>{
+ const commands=[];const f=fixture({manualDelegator:{executeShellCommand:async(c)=>commands.push(c)}});
+ f.learningStore.startManualLearning(HUYA);await f.manualWorker.scan(f.driver,f.models.OWN_BUNDLE);
+ f.learningStore.saveManualStatus(f.learningStore.readManualRequest().at,'launching','');f.learningStore.cancelManualLearning();
+ await f.manualWorker.scan(f.driver,f.models.OWN_BUNDLE);assert.equal(commands.length,0);
+});
+for(const apiVersion of [24,26]) test(`API ${apiVersion} current approved frame preserves final app/window/approval checks`,async()=>{
+ const f=learningFixture({apiVersion,configure(s){s.nodes[0].type='Button';}});
+ await observeAndApprove(f);f.state.apiCalls.length=0;
+ assert.equal((await f.run(4)).clickCount,1);
+ const before=f.state.apiCalls.slice(0,f.state.apiCalls.indexOf('driver.click'));
+ assert.equal(before.filter(n=>n==='driver.dumpLayout').length,1);
+ assert.ok(before.includes('window.getBounds'));assert.equal(before.includes('driver.findComponents'),false);
+});
+for(const duration of [650,750])test('API 26 never inherits API 24 slower export allowance '+duration,async()=>{
+ let armed=false;const f=learningFixture({apiVersion:26,configure(s){s.nodes[0].type='Button';},onApi(n,s){if(armed&&n==='driver.dumpLayout')s.advance(duration);}});
+ await observeAndApprove(f);armed=true;
+ assert.equal((await f.run(4)).clickCount,duration===650?1:0);
+});
+test('API 24 manual training retains the actual click without starting a competing layout client',async()=>{
+ const f=fixture({apiVersion:24});f.learningStore.startManualLearning(HUYA);
+ await f.manualWorker.scan(f.driver,HUYA);assert.equal(f.state.apiCalls.includes('driver.dumpLayout'),false);
+ f.state.advance(100);f.state.manualCallback({bundleName:HUYA,type:'Button',text:'关闭',componentId:'close',windowId:1,componentRect:BUTTON});
+ const rule=await f.manualWorker.scan(f.driver,HUYA);assert.ok(rule);assert.equal(rule.origin,'manual');
+ assert.equal(f.models.ruleState(rule,f.learningStore.readDecisions()),'approved');assert.equal(f.state.apiCalls.includes('driver.dumpLayout'),false);
+});
+test('manual listener is renewed while waiting for the app to launch, including unfocused bridge windows',async()=>{
+ const f=fixture({apiVersion:24});f.learningStore.startManualLearning(HUYA);await f.manualWorker.scan(f.driver,f.models.OWN_BUNDLE);
+ const callback=f.state.manualCallback;f.state.advance(1700);await f.manualWorker.scan(f.driver,'');assert.notEqual(f.state.manualCallback,callback);
+ f.state.manualCallback({bundleName:HUYA,type:'Button',text:'关闭',componentId:'close',windowId:1,componentRect:BUTTON});
+ assert.equal(f.manualWorker.eventBundle(),HUYA);
+ const r=await f.manualWorker.scan(f.driver,HUYA);assert.ok(r);
+});
+
+for (const postMs of [207, 310]) test('API 26 keeps its native post-read allowance rather than API 24 limit: '+postMs,async()=>{
+ let armed=false;
+ const f=learningFixture({apiVersion:26,configure(s){s.nodes[0].type='Button';},onApi(name,s){
+  if(!armed)return;
+  if(name==='driver.dumpLayout')s.advance(294);
+  if(name==='window.getBounds' && s.apiCalls.includes('driver.dumpLayout'))s.advance(postMs);
+ }});
+ await observeAndApprove(f);armed=true;f.state.apiCalls.length=0;
+ const r=await f.run(4);assert.equal(r.clickCount,postMs===207?1:0);
+ if(postMs===310)assert.ok(r.history.some(x=>x.message.includes('300 ms')));
 });

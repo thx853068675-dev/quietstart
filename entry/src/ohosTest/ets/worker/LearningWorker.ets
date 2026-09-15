@@ -13,6 +13,7 @@ export { imageLayoutSignature } from './SnapshotLayout';
 const SKIP_QUERY: string = '[\\s\\S]*(跳[过過]|略[过過]|[关關][闭閉]|skip|close|dismiss|[×✕✖✗✘╳])[\\s\\S]*|\\s*[xX]\\s*';
 const ID_QUERY: string = '[\\s\\S]*(skip|close|dismiss)[\\s\\S]*';
 export class ScanReport {
+  approvedSnapshot: boolean = false;
   coordinateReadAt: number = 0;
   coordinateReadyAt: number = 0;
   imageRegions: Rect[] = [];
@@ -659,6 +660,7 @@ function definitelyBehind(other: DiscoveryNode, target: DiscoveryNode): boolean 
 
 export class SnapshotCandidate {
   approvedButton: boolean = false;
+  approvedRuleKey: string = '';
   rule: LearnedRule;
   adMarker?: AdMarkerEvidence;
   bounds: Rect;
@@ -670,9 +672,10 @@ export class SnapshotCandidate {
 }
 
 // Discovery uses one coherent native tree instead of a native round trip for
-// every attribute and possible parent. The caller must acquire a second fresh
-// matching snapshot before using its live bounds; stored template coordinates never drive input.
+// every attribute and possible parent. Callers enforce snapshot age, current
+// window and approval before input; stored template coordinates never drive input.
 export function recognizedLabel(value: string, field: string, bundle: string, pack?: RecognitionPack): string {
+  if (!value) { return ''; }
   return skipLabel(value) || packLabel(value, field, bundle, pack);
 }
 
@@ -721,10 +724,10 @@ export function discoverSnapshot(text: string, bundle: string, report: ScanRepor
       (a.hostWindowId && a.hostWindowId !== rootA.hostWindowId)) { return; }
     const box = snapshotBounds(a.bounds);
     // Retain structural ancestry even for a container without usable bounds.
-    const normalized: Record<string, string> = {};
-    for (const key of Object.keys(a)) { normalized[key] = a[key]; }
-    normalized.text = snapshotLabel(node);
-    const item = new DiscoveryNode(normalized, box ?? { left: 0, top: 0, right: 0, bottom: 0 }, order, parent);
+    // This tree is privately parsed for this call. Reuse its attributes
+    // instead of copying every field of every unrelated page node.
+    a.text = snapshotLabel(node);
+    const item = new DiscoveryNode(a, box ?? { left: 0, top: 0, right: 0, bottom: 0 }, order, parent);
     nodes.push(item);
     (node.children ?? []).forEach((child: SnapshotNode, index: number) => { visit(child, depth + 1, index, item); });
   };
@@ -745,19 +748,23 @@ export function discoverSnapshot(text: string, bundle: string, report: ScanRepor
     if (marker) { break; }
   }
   report.readable = true;
-  report.adEvidence = /splash|advert/i.test(rootA.pagePath ?? '') || nodes.some((node: DiscoveryNode) => !!recognizedLabel(node.a.text, 'text', bundle, pack) || !!recognizedLabel(node.a.description, 'description', bundle, pack) ||
-    !!controlIdLabel(node.a.id) || !!adLabel(node.a.text) || !!adLabel(node.a.description) ||
-    splashAdId(node.a.id) || /广告|[sS]plash|[aA]dvert/.test((node.a.text ?? '') + ' ' + (node.a.description ?? '') + ' ' + (node.a.id ?? '')));
-  const visibleBox = snapshotBounds(rootA.bounds);
-  const unknownLayer = nodes.some((node: DiscoveryNode) => /Image|Canvas|XComponent|Web/.test(node.a.type ?? '') &&
-    (node.box.right - node.box.left) * (node.box.bottom - node.box.top) > width * height * 0.45 &&
-    !nativePageBackground(node, nodes));
-  report.cleanReason = roots.length !== 1 ? '存在多个窗口' : report.adEvidence ? '发现广告或关闭控件线索' :
-    unknownLayer ? '大面积图片或绘制内容无法核实' : nodes.length < 6 ||
-    nodes.filter((node: DiscoveryNode) => (node.a.text ?? '').trim().length > 0).length < 3 ? '可读取的界面内容不足' :
-    !visibleBox || visibleBox.right - visibleBox.left < width * 0.8 ||
-    visibleBox.bottom - visibleBox.top < height * 0.8 ? '应用窗口未完整显示' : '';
-  report.cleanPage = report.cleanReason.length === 0;
+  // Execution preflight matches a selected approved button only. Ad-free
+  // classification belongs to discovery and must not run on every click read.
+  if (!selectedButtonOnly) {
+    report.adEvidence = /splash|advert/i.test(rootA.pagePath ?? '') || nodes.some((node: DiscoveryNode) => !!recognizedLabel(node.a.text, 'text', bundle, pack) || !!recognizedLabel(node.a.description, 'description', bundle, pack) ||
+      !!controlIdLabel(node.a.id) || !!adLabel(node.a.text) || !!adLabel(node.a.description) ||
+      splashAdId(node.a.id) || /广告|[sS]plash|[aA]dvert/.test((node.a.text ?? '') + ' ' + (node.a.description ?? '') + ' ' + (node.a.id ?? '')));
+    const visibleBox = snapshotBounds(rootA.bounds);
+    const unknownLayer = nodes.some((node: DiscoveryNode) => /Image|Canvas|XComponent|Web/.test(node.a.type ?? '') &&
+      (node.box.right - node.box.left) * (node.box.bottom - node.box.top) > width * height * 0.45 &&
+      !nativePageBackground(node, nodes));
+    report.cleanReason = roots.length !== 1 ? '存在多个窗口' : report.adEvidence ? '发现广告或关闭控件线索' :
+      unknownLayer ? '大面积图片或绘制内容无法核实' : nodes.length < 6 ||
+      nodes.filter((node: DiscoveryNode) => (node.a.text ?? '').trim().length > 0).length < 3 ? '可读取的界面内容不足' :
+      !visibleBox || visibleBox.right - visibleBox.left < width * 0.8 ||
+      visibleBox.bottom - visibleBox.top < height * 0.8 ? '应用窗口未完整显示' : '';
+    report.cleanPage = report.cleanReason.length === 0;
+  }
   report.reason = '目标识别：已读取 ' + nodes.length + ' 个可见控件；跳过/关闭文字、无障碍描述及图标标识均未匹配。图片内文字或未开放的控件可能无法读取，不能据此判定没有广告';
   const structuralKinds = new Map<DiscoveryNode, string>();
   const structuralKind = (node: DiscoveryNode): string => {
@@ -770,13 +777,18 @@ export function discoverSnapshot(text: string, bundle: string, report: ScanRepor
       Math.abs(rule.right - (node.box.right - window.left) / width) <= 0.015 &&
       Math.abs(rule.top - (node.box.top - window.top) / height) <= 0.015 &&
       Math.abs(rule.bottom - (node.box.bottom - window.top) / height) <= 0.015);
+    // Unapproved structural candidates cannot be returned by selected-only
+    // matching; avoid discovering every image/container again. Occlusion,
+    // enabled state, geometry and selected-target checks still use all nodes.
+    if (selectedButtonOnly && !saved) { structuralKinds.set(node, ''); return ''; }
     const kind = saved?.structureKind || structuralAction(node, nodes, window);
     structuralKinds.set(node, kind);
     return kind;
   };
   const labels = nodes.filter((node: DiscoveryNode) => !!recognizedLabel(node.a.text, 'text', bundle, pack) || !!recognizedLabel(node.a.description, 'description', bundle, pack));
-  const sources = nodes.filter((node: DiscoveryNode) => !!structuralKind(node) || (!overlayDismissTarget(node, nodes, window) && (labels.includes(node) || (!!controlIdLabel(node.a.id) &&
-    (!node.a.text || !!recognizedLabel(node.a.text, 'text', bundle, pack)) && (!node.a.description || !!recognizedLabel(node.a.description, 'description', bundle, pack))))));
+  // Filter semantics before walking overlays: ordinary page nodes cannot be targets.
+  const sources = nodes.filter((node: DiscoveryNode) => !!structuralKind(node) || ((labels.includes(node) || (!!controlIdLabel(node.a.id) &&
+    (!node.a.text || !!recognizedLabel(node.a.text, 'text', bundle, pack)) && (!node.a.description || !!recognizedLabel(node.a.description, 'description', bundle, pack)))) && !overlayDismissTarget(node, nodes, window)));
   if (sources.length > 24) { report.reason = '目标识别：发现 ' + sources.length + ' 个候选，超过 24 个，无法确定唯一目标'; return undefined; }
   let result: SnapshotCandidate | undefined = undefined;
   let selectedTarget: DiscoveryNode | undefined = undefined;
@@ -873,8 +885,8 @@ export function discoverSnapshot(text: string, bundle: string, report: ScanRepor
       }
       return false;
     };
-    if (nodes.some((other: DiscoveryNode) => (receivesTouch(other) || other.a.hitTestBehavior === 'HitTestMode.Block') && !related(other) && overlayDismissTarget(other, nodes, window) !== currentTarget && !definitelyBehind(other, currentTarget) &&
-      centerX >= other.box.left && centerX <= other.box.right && centerY >= other.box.top && centerY <= other.box.bottom)) {
+    if (nodes.some((other: DiscoveryNode) => centerX >= other.box.left && centerX <= other.box.right && centerY >= other.box.top && centerY <= other.box.bottom &&
+      (receivesTouch(other) || other.a.hitTestBehavior === 'HitTestMode.Block') && !related(other) && !definitelyBehind(other, currentTarget) && overlayDismissTarget(other, nodes, window) !== currentTarget)) {
       report.reason = '点击位置与其他控件重叠：目标「' + label + '」中心 (' + Math.round(centerX) + ', ' + Math.round(centerY) + ') 可能被覆盖，取消点击'; return undefined;
     }
     const targetId = snapshotTargetId(target, semantic);
@@ -909,6 +921,7 @@ export function discoverSnapshot(text: string, bundle: string, report: ScanRepor
     rule.key = ruleKey(rule);
     result = new SnapshotCandidate(rule, currentTarget.box, window, rootA.hostWindowId ?? '');
     result.approvedButton = !!learnedButton;
+    result.approvedRuleKey = learnedButton?.key ?? '';
     result.adMarker = learnedButton ? targetMarker : (explicitAdAction(label) ? undefined : targetMarker);
     selectedTarget = target;
   }
@@ -920,7 +933,9 @@ export function discoverSnapshot(text: string, bundle: string, report: ScanRepor
 // correlated to one live compact component; subsequent matches require the
 // same window-relative geometry, type, developer ID and action text.
 function manualText(value: string): string {
-  return skipLabel(value) || (value ?? '').trim().slice(0, 64);
+  const clean = (value ?? '').trim();
+  if (/^[（(]?\d{1,2}(?:\s*(?:秒|s|sec))?[）)]?$/i.test(clean)) { return '#countdown'; }
+  return skipLabel(clean) || clean.slice(0, 64);
 }
 function manualTree(text: string, bundle: string): SnapshotNode | undefined {
   if (!text || text.length > 8 * 1024 * 1024) { return undefined; }
@@ -967,12 +982,13 @@ export function manualSnapshot(text: string, bundle: string, event?: UIElementIn
     if (v.hitTestBehavior === 'HitTestMode.Block') { return; }
     const label = manualActionText(n);
     const id = /^\d+$/.test(v.id ?? '') ? '' : (v.id ?? '');
-    const safeType = /^(Text|Button|Image|Row|Column|Stack|Flex|RelativeContainer|SymbolGlyph|View|android\.widget\.(TextView|Button|ImageView)|android\.view\.View)$/.test(v.type ?? '');
+    const safeType = (v.clickable === 'true' && !/TextInput|TextArea|EditText|WebView/.test(v.type ?? '')) || /^(Text|Button|Image|Row|Column|Stack|Flex|RelativeContainer|SymbolGlyph|View|android\.widget\.(TextView|Button|ImageView)|android\.view\.View)$/.test(v.type ?? '');
     const identity = event ? v.type === event.type &&
       (!event.componentId || event.componentId === v.id || event.componentId === v.accessibilityId) &&
       (!event.text || manualText(event.text) === manualText(label)) :
-      v.type === saved!.buttonType && id === saved!.targetId && manualText(label) === manualText(saved!.example);
-    const tolerance = event ? 2 : Math.min(width, height) * 0.015;
+      v.type === saved!.buttonType && (id === saved!.targetId || (!!skipLabel(label) && skipLabel(label) === skipLabel(saved!.example))) &&
+      manualText(label) === manualText(saved!.example);
+    const tolerance = event ? 4 : Math.min(width, height) * 0.025;
     if (box && v.enabled === 'true' && v.hitTestBehavior !== 'HitTestMode.None' && safeType && identity &&
       Math.abs(box.left - reference.left) <= tolerance && Math.abs(box.top - reference.top) <= tolerance &&
       Math.abs(box.right - reference.right) <= tolerance && Math.abs(box.bottom - reference.bottom) <= tolerance &&
@@ -990,7 +1006,7 @@ export function manualSnapshot(text: string, bundle: string, event?: UIElementIn
   try { (root.children ?? []).forEach((c: SnapshotNode, i: number) => { visit(c, 0, i); }); } catch (_) { return undefined; }
   if (found.length !== 1) {
     // Some gesture handlers report the enclosing toolbar rather than its
-    // close label. Resolve only a unique, independently evidenced ad target
+    // close label. Resolve only a unique explicit dismissal label
     // beneath that exact event source; never infer a tap on the ad surface.
     if (!event || found.length > 1) { return undefined; }
     const sources = pool.filter((n: DiscoveryNode) => {
@@ -1002,15 +1018,14 @@ export function manualSnapshot(text: string, bundle: string, event?: UIElementIn
         box.bottom - box.top <= height * 0.25;
     });
     if (sources.length !== 1) { return undefined; }
-    const candidate = discoverSnapshot(text, bundle, new ScanReport());
-    if (!candidate || candidate.rule.labelSource === 'manual') { return undefined; }
-    const targets = pool.filter((n: DiscoveryNode) => n.a.type === candidate.rule.buttonType &&
-      Math.abs(n.box.left - (window.left + candidate.rule.left * width)) <= 2 && Math.abs(n.box.right - (window.left + candidate.rule.right * width)) <= 2 &&
-      Math.abs(n.box.top - (window.top + candidate.rule.top * height)) <= 2 && Math.abs(n.box.bottom - (window.top + candidate.rule.bottom * height)) <= 2);
-    if (targets.length !== 1 || targets[0] === sources[0]) { return undefined; }
-    let parent = targets[0].parent;
-    while (parent && parent !== sources[0]) { parent = parent.parent; }
-    if (!parent) { return undefined; }
+    const targets = pool.filter((n: DiscoveryNode) => {
+      if (!skipLabel(n.a.text || n.a.originalText || n.a.description || '') ||
+        !isSplashButton(n.box, window) || n.a.enabled !== 'true') { return false; }
+      let parent = n.parent;
+      while (parent && parent !== sources[0]) { parent = parent.parent; }
+      return !!parent;
+    });
+    if (targets.length !== 1) { return undefined; }
     const targetEvent: UIElementInfo = { bundleName: bundle, type: targets[0].a.type ?? '', text: '',
       windowId: event.windowId, componentRect: targets[0].box };
     return manualSnapshot(text, bundle, targetEvent);
@@ -1028,9 +1043,32 @@ export function manualSnapshot(text: string, bundle: string, event?: UIElementIn
     !related(other) && !definitelyBehind(other, target) && centerX >= other.box.left && centerX <= other.box.right &&
     centerY >= other.box.top && centerY <= other.box.bottom)) { return undefined; }
   const candidate = found[0]; candidate.approvedButton = !!saved;
+  if (saved) { candidate.approvedRuleKey = saved.key; candidate.rule.key = saved.key; candidate.rule.targetId = saved.targetId; }
   candidate.bounds = target.box;
   candidate.rule.profile = captureProfile(candidate.rule, selected!, selected!, pool, window,
     relatedGraphicalCountdown(target, pool, window), '', undefined, saved);
   candidate.adMarker = new AdMarkerEvidence('', 'approved-button', candidate.bounds);
   return candidate;
+}
+
+// For API 22–25, use the actual accessibility click event as the user's
+// demonstration. Starting another CLI layout client while the listener owns
+// AAMS can fail with RET_ERR_CONNECTION_EXIST. This is manual provenance, not
+// inferred advertising evidence; future execution still matches a full tree.
+export function manualEventSnapshot(event: UIElementInfo, window: Rect): SnapshotCandidate | undefined {
+  if (!event.componentRect || !event.bundleName || !Number.isInteger(event.windowId) ||
+    !isSplashButton(event.componentRect, window) || !event.type ||
+    /TextInput|TextArea|EditText|WebView|Progress/.test(event.type)) { return undefined; }
+  const box = event.componentRect;
+  const bounds = (r: Rect): string => '[' + r.left + ',' + r.top + '][' + r.right + ',' + r.bottom + ']';
+  const rootAttributes: Record<string, string> = {};
+  rootAttributes['type'] = 'root'; rootAttributes['bundleName'] = event.bundleName;
+  rootAttributes['hostWindowId'] = String(event.windowId); rootAttributes['bounds'] = bounds(window);
+  rootAttributes['visible'] = 'true'; rootAttributes['focused'] = 'true';
+  const attributes: Record<string, string> = {};
+  attributes['type'] = event.type; attributes['id'] = event.componentId ?? ''; attributes['text'] = event.text ?? '';
+  attributes['bounds'] = bounds(box); attributes['visible'] = 'true'; attributes['enabled'] = 'true'; attributes['clickable'] = 'true';
+  const child: SnapshotNode = { attributes: attributes };
+  const root: SnapshotNode = { attributes: rootAttributes, children: [child] };
+  return manualSnapshot(JSON.stringify(root), event.bundleName, event);
 }

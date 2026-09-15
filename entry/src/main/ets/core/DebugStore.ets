@@ -51,13 +51,6 @@ export function isDebugOnline(status: DebugStatus, now: number = Date.now()): bo
     (status.expiresAt === 0 || now < status.expiresAt);
 }
 
-// A fresh manual UI launch after the final recovery died may not receive the
-// supervisor's Want (for example while locked). Do not hide that spent budget.
-export function exhaustedRecovery(status: DebugStatus, token: string, now: number = Date.now()): boolean {
-  return token.length > 0 && status.supervisorToken === token && status.recoveryAttempt >= 3 &&
-    (!status.running || now - status.heartbeatAt > 30000);
-}
-
 export class DebugStore {
   private directory: string;
   constructor(directory: string) {

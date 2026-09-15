@@ -44,7 +44,8 @@ function fixture(prepare) {
 }
 
 test('local activation connects only to loopback, authenticates, and sends only the fixed detached restart',async()=>{
- const f=fixture();await f.instance.activate('192.168.3.160:39445');
+ const f=fixture();f.settings.enabled=false;await f.instance.activate('192.168.3.160:39445');
+ assert.equal(f.settings.enabled,false,'authorization must precede enabling');
  assert.equal(f.connected().address.address,'127.0.0.1');assert.equal(f.connected().address.port,39445);
  await f.receive(3,tlv('authtype','1'));await f.receive(2,'challenge');
  await f.receive(4,tlv('daemonauthstatus','DAEMON_UNAUTH')+tlv('emgmsg','[E000002]: wait'));
@@ -57,7 +58,7 @@ test('local activation connects only to loopback, authenticates, and sends only 
  assert.match(command,/^umask 077; mkdir -p \/data\/local\/tmp\/quietstart-supervisor/);
  assert.ok(command.includes(Buffer.from(load('SupervisorProgram').SUPERVISOR_PROGRAM).toString('base64')));
  assert.match(load('SupervisorProgram').SUPERVISOR_PROGRAM,/-s seconds 0 -s supervisor/);assert.ok(command.endsWith('echo QuietStartLocalScheduled; wait'));assert.ok(!command.includes('\0'));assert.ok(!command.includes('192.168'));
- assert.equal(f.settings.stopRequested,false);assert.deepEqual(f.settings.packages,['com.example.saved']);
+ assert.equal(f.settings.stopRequested,false);assert.equal(f.settings.enabled,true);assert.deepEqual(f.settings.packages,['com.example.saved']);
  assert.equal(f.instance.readState().success,false);
 });
 test('successful authentication waits for channel zero cleanup before starting a shell task',async()=>{
@@ -234,4 +235,101 @@ test('the actual generated install job records success only after bm succeeds an
       assert.match(fs.readFileSync(path.join(directory,'return.log'),'utf8'),/quietstartInstallResume/);
     }
   } finally {fs.rmSync(directory,{recursive:true,force:true});}
+});
+
+test('layout query uses only trusted loopback, preserves activation, handles split data and retains the authenticated socket',async()=>{
+ const f=fixture(),activation=JSON.stringify({port:'36167',success:true});
+ f.files.set('/private/local-activation.json',activation);f.files.set('/private/local-hdc-identity.json',JSON.stringify({publicKey:'a2V5',privateKey:'a2V5'}));
+ f.setStatus({running:true});const pending=f.instance.readCurrentLayout();for(let i=0;i<12;i++)await Promise.resolve();
+ await f.receiveAuthorizedAndClose();
+ const cmd=Buffer.from(f.sends.find(p=>p.command===1001).data).toString();
+ assert.match(cmd,/timeout -k 1 2 uitest dumpLayout/);assert.match(cmd,/rm -f/);assert.doesNotMatch(cmd,/aa test|aa start|bm install/);
+ const layout=JSON.stringify({attributes:{text:'跳过'},padding:'x'.repeat(150000)});const body=bytes(layout+'\n__QuietStartLabelEnd__\n');
+ for(let i=0;i<body.length;i+=32000)await f.instance.receive({channel:101,command:10,data:body.slice(i,i+32000)});
+ assert.equal(await pending,layout);assert.equal(f.files.get('/private/local-activation.json'),activation);
+ assert.equal(f.keygen(),0);assert.equal(f.closed(),false);assert.equal(f.connected().address.address,'127.0.0.1');
+ f.instance.close();
+});
+test('layout cannot create a new trust identity',async()=>{const f=fixture();assert.equal(await f.instance.readCurrentLayout(),'');assert.equal(f.sends.length,0);});
+
+test('generated layout command retains exit status and bounded diagnostic output, and cleans both files',async()=>{
+ const f=await readyLayout(),cp=require('node:child_process'),os=require('node:os');
+ const raw=Buffer.from(f.sends.find(p=>p.command===1001).data).toString();f.instance.close();
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'quietstart-layout-job-'));
+ try {
+  const bin=path.join(dir,'bin');fs.mkdirSync(bin);
+  fs.writeFileSync(path.join(bin,'uitest'),'#!/bin/sh\necho "$MOCK_OUTPUT"\nif [ "$MOCK_WRITE" = 1 ]; then echo \'{"frame":"fresh"}\' > "$3"; fi\nexit "$MOCK_EXIT"\n',{mode:0o755});
+  const command=raw.replaceAll('/data/local/tmp/quietstart-layout-',dir+'/layout-').replace('/bin/timeout -k 1 2 ','');
+  for(const [code,write] of [[0,1],[0,0],[1,0],[124,0]]) {
+   const output=cp.execFileSync('/bin/sh',['-c',command],{encoding:'utf8',env:{...process.env,PATH:bin+':'+process.env.PATH,MOCK_EXIT:String(code),MOCK_WRITE:String(write),MOCK_OUTPUT:'backend unavailable '+ 'x'.repeat(1000)}});
+   if(code===0 && write) assert.equal(output.trim(),'{"frame":"fresh"}\n__QuietStartLabelEnd__');
+   else {assert.match(output,new RegExp('Layout CLI failed: exit='+code));assert.match(output,/backend unavailable/);assert.ok(output.length<600);}
+   assert.deepEqual(fs.readdirSync(dir),['bin']);
+  }
+ } finally {fs.rmSync(dir,{recursive:true,force:true});}
+});
+
+test('layout command failure details reach the caller instead of an empty JSON diagnostic',async()=>{
+ const f=await readyLayout();const p=f.instance.readCurrentLayout();
+ await f.instance.receive({channel:102,command:10,data:bytes('Layout CLI failed: exit=124\nbackend unavailable\n__QuietStartLabelEnd__')});
+ await assert.rejects(p,/exit=124[\s\S]*backend unavailable/);assert.equal(f.closed(),true);
+});
+
+test('layout transport failure retains the specific cause for terminal diagnostics',async()=>{
+ const f=fixture();f.files.set('/private/local-activation.json',JSON.stringify({port:'36167'}));
+ f.files.set('/private/local-hdc-identity.json',JSON.stringify({publicKey:'a2V5',privateKey:'a2V5'}));
+ const pending=f.instance.readCurrentLayout();for(let i=0;i<12;i++)await Promise.resolve();
+ f.instance.fail('socket error 2300002');await assert.rejects(pending,/socket error 2300002/);assert.equal(f.closed(),true);
+});
+
+async function readyLayout() {
+ const f=fixture();f.files.set('/private/local-activation.json',JSON.stringify({port:'36167'}));
+ f.files.set('/private/local-hdc-identity.json',JSON.stringify({publicKey:'a2V5',privateKey:'a2V5'}));
+ const p=f.instance.readCurrentLayout();for(let i=0;i<12;i++)await Promise.resolve();
+ await f.receiveAuthorizedAndClose();
+ await f.instance.receive({channel:101,command:10,data:bytes('{"frame":1}\n__QuietStartLabelEnd__')});
+ assert.equal(await p,'{"frame":1}');return f;
+}
+test('warm read uses a new channel without reauth; late previous output and close cannot complete it',async()=>{
+ const f=await readyLayout(),handshakes=f.sends.filter(p=>p.command===1).length;
+ let resolved=false;const p=f.instance.readCurrentLayout().then(s=>{resolved=true;return s});
+ await f.instance.receive({channel:101,command:10,data:bytes('{"frame":"stale"}\n__QuietStartLabelEnd__')});
+ await f.receiveClose(101);assert.equal(resolved,false);
+ await assert.rejects(f.instance.readCurrentLayout(),/尚未完成/);
+ await f.instance.receive({channel:102,command:10,data:bytes('{"frame":2}\n__QuietStartLabelEnd__')});
+ assert.equal(await p,'{"frame":2}');assert.equal(f.sends.filter(p=>p.command===1).length,handshakes);
+ assert.equal(f.instance.readLayoutTiming().reused,true);assert.equal(f.closed(),false);
+ f.instance.layoutIdleAt=Date.now()-16000;f.instance.checkProgress();assert.equal(f.closed(),true);
+});
+test('warm timeout rejects pending read and shuts down session instead of returning old frame',async()=>{
+ const f=await readyLayout();const p=f.instance.readCurrentLayout();f.instance.layoutTiming.startedAt=Date.now()-5100;
+ f.instance.checkProgress();await assert.rejects(p,/超过 5 秒/);assert.equal(f.closed(),true);
+});
+test('changed wireless port drops old socket rather than querying stale endpoint',async()=>{
+ const f=await readyLayout();f.files.set('/private/local-activation.json',JSON.stringify({port:'40001'}));
+ await assert.rejects(f.instance.readCurrentLayout(),/端口已变更/);assert.equal(f.closed(),true);
+});
+test('layout stream preserves split UTF-8 and sentinel fragments, rejects oversized data',async()=>{
+ const f=await readyLayout();const p=f.instance.readCurrentLayout();
+ const raw=bytes('{"text":"跳过"}\n__QuietStartLabelEnd__');
+ for(const byte of raw)await f.instance.receive({channel:102,command:10,data:new Uint8Array([byte])});
+ assert.equal(await p,'{"text":"跳过"}');
+ const huge=f.instance.readCurrentLayout();
+ await f.instance.receive({channel:103,command:10,data:new Uint8Array(4194305)});
+ await assert.rejects(huge,/4 MiB/);assert.equal(f.closed(),true);
+});
+test('manual app entry uses the existing loopback identity without changing supervision or settings',async()=>{
+ const f=fixture();const activation=JSON.stringify({port:'36167'});
+ f.files.set('/private/local-activation.json',activation);f.files.set('/private/local-hdc-identity.json',JSON.stringify({publicKey:'a2V5',privateKey:'a2V5'}));f.setStatus({running:true});
+ const pending=f.instance.startAppEntry('com.example.app','aa start -b com.example.app -m entry -a PhoneAbility');
+ for(let i=0;i<12;i++)await Promise.resolve();await f.receiveAuthorizedAndClose();
+ const cmd=Buffer.from(f.sends.find(p=>p.command===1001).data).toString();assert.match(cmd,/timeout 5 aa start -b com.example.app -m entry -a PhoneAbility/);assert.doesNotMatch(cmd,/aa test|force-stop|bm install/);
+ await f.instance.receive({channel:101,command:10,data:bytes('start ability successfully.\n__QuietStartLabelEnd__\n')});
+ assert.equal(await pending,'start ability successfully.');assert.equal(f.files.get('/private/local-activation.json'),activation);assert.equal(f.settings.stopRequested,true);assert.equal(f.keygen(),0);assert.equal(f.closed(),true);
+});
+test('manual app entry rejects foreign targets, shell operators and missing trust',async()=>{
+ for(const command of ['aa start -b com.other.app -a EntryAbility','aa start -b com.example.app -m entry -a X;reboot','aa force-stop com.example.app']){
+  const f=fixture();await assert.rejects(f.instance.startAppEntry('com.example.app',command));assert.equal(f.sends.length,0);
+ }
+ const f=fixture();await assert.rejects(f.instance.readAppEntry('com.example.app'));assert.equal(f.keygen(),0);
 });

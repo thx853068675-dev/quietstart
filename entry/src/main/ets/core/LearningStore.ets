@@ -17,6 +17,7 @@ export class SeenApp extends InstalledApp {
 
 export function discoverableBundle(bundle: string): boolean {
   return validBundle(bundle) && bundle !== OWN_BUNDLE &&
+    !['com.huawei.shell_assistant', 'com.android.permissioncontroller'].includes(bundle) &&
     !/^(ohos\.|com\.ohos\.|com\.huawei\.hmos\.(launcher|settings|systemui|sceneboard|permissionmanager|permissioncontroller|screenlock)(\.|$))/.test(bundle);
 }
 
@@ -329,6 +330,7 @@ export class LearningStore {
   }
   recordSeenApp(bundle: string): void {
     if (!discoverableBundle(bundle)) { return; }
+    this.restoreApp(bundle);
     const apps = this.readSeenApps();
     let app = apps.find((item: SeenApp) => item.bundleName === bundle);
     if (!app) {
@@ -354,7 +356,52 @@ export class LearningStore {
       const item = new InstalledApp(); item.bundleName = bundle;
       item.label = this.displayName(bundle, names.find((app: InstalledApp) => app.bundleName === bundle)?.label); result.push(item);
     }
-    return result;
+    const hidden = this.nameMap('app-availability.json');
+    return result.filter((app: InstalledApp) => !hidden[app.bundleName]);
+  }
+  appUnavailable(bundle: string): string { return this.nameMap('app-availability.json')[bundle] || ''; }
+  hideApp(bundle: string, reason: string = 'hidden'): void {
+    if (!discoverableBundle(bundle)) { return; }
+    const map = this.nameMap('app-availability.json'); map[bundle] = reason;
+    this.write('app-availability.json', JSON.stringify(map));
+  }
+  restoreApp(bundle: string): void {
+    const map = this.nameMap('app-availability.json');
+    if (map[bundle]) { map[bundle] = ''; this.write('app-availability.json', JSON.stringify(map)); }
+  }
+  syncNativeCatalog(text: string, startedAt: number): number {
+    // A complete, validated current-user catalog is authoritative ONLY for
+    // previously known native bundles. Absence never removes a bridge app.
+    if (text.length > 4 * 1024 * 1024) { throw new Error('应用列表返回过大'); }
+    const raw = JSON.parse(text) as InstalledApp[];
+    if (!Array.isArray(raw) || !raw.length || raw.length > 2000 || !raw.some((a: InstalledApp) => a.bundleName === OWN_BUNDLE) ||
+      raw.some((a: InstalledApp) => !a || !validBundle(a.bundleName) || typeof a.label !== 'string' || a.label.length > 100)) {
+      throw new Error('未取得完整应用列表，保留现有记录');
+    }
+    const old = this.readCatalog();
+    if (old.updatedAt > startedAt) { return 0; }
+    const apps = this.parseApps(text); const installed = apps.map((a: InstalledApp) => a.bundleName);
+    const android = this.androidApps(); const seen = this.readSeenApps();
+    const unavailable = this.nameMap('app-availability.json');
+    let removed = 0;
+    for (const app of old.apps) {
+      if (!installed.includes(app.bundleName) && !android.includes(app.bundleName) &&
+        !((seen.find((a: SeenApp) => a.bundleName === app.bundleName)?.lastSeen ?? 0) > startedAt)) {
+        if (!unavailable[app.bundleName]) { removed++; }
+        unavailable[app.bundleName] = 'uninstalled';
+      }
+    }
+    const names = this.nameMap('app-names.json');
+    for (const app of apps) {
+      // A reinstall revives an automatically removed app; manual hiding remains
+      // until its next foreground visit. User aliases always take precedence.
+      if (unavailable[app.bundleName] === 'uninstalled') { unavailable[app.bundleName] = ''; }
+      if (app.label !== app.bundleName && app.label.length <= 80 && !/[\r\n]/.test(app.label)) { names[app.bundleName] = app.label; }
+    }
+    this.write('app-names.json', JSON.stringify(names));
+    this.write('app-availability.json', JSON.stringify(unavailable));
+    const catalog = new AppCatalog(); catalog.apps = apps; catalog.updatedAt = Date.now(); catalog.requestAt = startedAt;
+    this.saveCatalog(catalog); return removed;
   }
   readCatalog(): AppCatalog {
     try {

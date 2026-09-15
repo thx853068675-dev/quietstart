@@ -25,3 +25,7 @@ python3 tools/export-source.py
 ## 安装工具
 
 小白轻启整合版的源码、Mac / Windows 构建和发布现已独立迁至 [quietstart-installer](https://github.com/thx853068675-dev/quietstart-installer)。本仓库只维护轻启应用及其构建、侧载脚本。
+
+## 0.9.55 版本编号
+
+正式版显示版本统一为 `0.9.55`。内部 `versionCode` 使用 `96001`，高于之前本地 `0.9.60-test / 96000` 实验包，允许测试用户保留数据覆盖升级。主包与工作模块必须一致；后续构建代码继续递增，不从显示版本反推。0.9.54～0.9.60-test 的文档编号保留为历史测试记录。

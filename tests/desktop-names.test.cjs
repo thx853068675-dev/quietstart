@@ -9,3 +9,14 @@ test('ignores non-launcher, invisible, ambiguous and unknown icons',()=>{
  assert.equal(Object.keys(parse(tree(),['com.netease'])).length,0);
  assert.equal(Object.keys(parse('{broken',[bundle])).length,0);
 });
+function captionTree(id,text='十六番旅行',owner='com.ohos.sceneboard',visible='true') {
+ return JSON.stringify({attributes:{bundleName:owner,visible:'true'},children:[{attributes:{id,type:'Text',text,visible}}]});
+}
+test('6.1 sibling caption IDs resolve exact bridge bundle, independent of icon parent',()=>{
+ assert.equal(parse(captionTree('AppNameLite_text_com.fan.app_mu355y0n9yjiu6khn6s'),['com.fan.app'])['com.fan.app'],'十六番旅行');
+ assert.equal(parse(captionTree('AppName_text_com.netease.cloudmusic_token','网易云音乐'),[bundle])[bundle],'网易云音乐');
+});
+test('caption identity rejects prefix packages, widgets, hidden and foreign window text',()=>{
+ for(const raw of [captionTree('AppNameLite_text_com.fan.app_extra'),''].filter(Boolean)) assert.equal(Object.keys(parse(raw,['com.fan'])).length,0);
+ for(const raw of [captionTree('AppNameLite_text_com.fan.app_extra','name','com.fan.app'),captionTree('AppNameLite_text_com.fan.app_extra','name',undefined,'false'),captionTree('AppName_text__天气_token','天气')]) assert.equal(Object.keys(parse(raw,['com.fan.app'])).length,0);
+});

@@ -38,7 +38,7 @@ export const RECOGNITION_STRATEGIES: RecognitionStrategy[] = [
   new RecognitionStrategy('S05', '图标语义', '× · 带关闭说明的图片', '描述或控件标识提供关闭含义，并有广告依据。', '图标按钮或其接收手势的容器。', '图片没有关闭语义，或标识与实际内容冲突。'),
   new RecognitionStrategy('S06', '广告容器结构', '计时文字 + 图片按钮', '广告容器、图片、计时与关闭控件的层级对应已支持的结构。', '结构中唯一的关闭目标。', '结构不完整、容器过大或存在多个目标。'),
   new RecognitionStrategy('S07', '图片文字兜底', '图片里的「广告」+ 关闭按钮', '已有合理关闭候选，控件证据不足时用 OCR 补充广告标记。', '重新读取并核对后的实时控件。', 'OCR 超时、标记未确认或目标已变化。'),
-  new RecognitionStrategy('S08', '用户示范确认', '强化学习 → 手动关闭', '用户主动示范，点击事件对应唯一控件，并确认目标消失。', '示范对应的实时控件。', '事件缺失、无法对应控件或关闭结果未确认。')
+  new RecognitionStrategy('S08', '用户示范确认', '强化学习 → 手动关闭', '用户主动示范，点击事件对应唯一的小控件，直接保存并启用。', '示范对应的实时控件。', '事件缺失、目标不唯一或点击的是整页容器。')
 ];
 export function strategyDefinition(id: string): RecognitionStrategy {
   return RECOGNITION_STRATEGIES.find((s: RecognitionStrategy) => s.id === id) ?? RECOGNITION_STRATEGIES[1];
