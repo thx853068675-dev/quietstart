@@ -44,7 +44,7 @@ export default class OpenHarmonyTestRunner implements TestRunner {
       const token = args.parameters['-s supervisor'] || args.parameters['supervisor'] || '';
       const attempt = Number(args.parameters['-s recoveryAttempt'] || args.parameters['recoveryAttempt'] || '0');
       if (token && (!validSessionToken(token) || !new SupervisionStore(delegator.getAppContext().filesDir).allows(token) ||
-        !Number.isInteger(attempt) || attempt < 0 || attempt > 3)) {
+        !Number.isInteger(attempt) || attempt < 0 || attempt > 2147483647)) {
         await delegator.finishTest('Supervised session was stopped or replaced', 0); return;
       }
       // A recovery already captured the previous exit through EntryAbility.

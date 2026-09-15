@@ -3,7 +3,7 @@ import hashlib, pathlib, re, zipfile
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 TOP={'README.md','LICENSE','THIRD_PARTY_NOTICES.md','SECURITY.md','CONTRIBUTING.md','.gitignore','build-profile.example.json5','code-linter.json5','hvigorfile.ts','oh-package.json5','oh-package-lock.json5'}
 DIRS={'AppScope','entry','hvigor','rules','scripts','tests','tools','docs'}
-PUBLIC_DOCS={'ARCHITECTURE.md','BUILD.md','INSTALL.md','RESIGN.md','RELEASING.md','TESTING.md','USAGE.md','LIFECYCLE.md','RECOGNITION.md',
+PUBLIC_DOCS={'api26-validation-0.9.58.md','app-metadata-0.9.59.md','manual-learning-lifecycle-0.9.58.md','pressure-test-6.1-0.9.60.md','recovery-connection-0.9.60.md','ARCHITECTURE.md','BUILD.md','INSTALL.md','RESIGN.md','RELEASING.md','TESTING.md','USAGE.md','LIFECYCLE.md','RECOGNITION.md',
              'share-to-users-guide.md','single-package-0.9.42.md','community-learning-0.9.40.md',
              'community-structural-before-0.9.40.json','community-structural-results-0.9.40.json'}
 PUBLIC_SCREENSHOTS={'overview.jpeg','connection.jpeg','apps.jpeg','rules.jpeg','records.jpeg','settings.jpeg','preferences.jpeg',

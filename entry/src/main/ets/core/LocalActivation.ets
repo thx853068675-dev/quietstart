@@ -36,6 +36,18 @@ class LocalIdentity {
   publicKey: string = '';
 }
 
+export class LayoutReadTiming {
+  startedAt: number = 0;
+  reused: boolean = false;
+  keyReadyAt: number = 0;
+  connectedAt: number = 0;
+  authorizedAt: number = 0;
+  commandAt: number = 0;
+  firstByteAt: number = 0;
+  finishedAt: number = 0;
+  bytes: number = 0;
+}
+
 export class LocalActivation implements WorkerShell {
   private prepare?: PrepareWorker;
   private preparing: boolean = false;
@@ -45,6 +57,18 @@ export class LocalActivation implements WorkerShell {
   private commandReject?: (error: Error) => void;
   private commandTimer: number = -1;
   private labelBundle: string = '';
+  private appCommand: string = '';
+  private layoutRead: boolean = false;
+  private layoutChannel: number = 100;
+  private layoutChunks: Uint8Array[] = [];
+  private layoutByteCount: number = 0;
+  private layoutSuffix: string = '';
+  private layoutIdleAt: number = 0;
+  private layoutTiming: LayoutReadTiming = new LayoutReadTiming();
+
+  canReuseLayout(): boolean { return !this.closed; }
+  readLayoutTiming(): LayoutReadTiming { return this.layoutTiming; }
+  private layoutReject?: (error: Error) => void;
   private labelResolve?: (value: string) => void;
   private labelBytes: number[] = [];
   private directory: string;
@@ -72,6 +96,68 @@ export class LocalActivation implements WorkerShell {
     const result = new Promise<string>((resolve) => { this.labelResolve = resolve; });
     this.activate(port).catch(() => { this.close(); });
     return result;
+  }
+
+  async readInstalledApps(): Promise<string> {
+    return this.readAppCommand('bm dump -a -l');
+  }
+
+  async readAppEntry(bundle: string): Promise<string> {
+    if (!/^[A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)+$/.test(bundle)) { throw new Error('Invalid application'); }
+    return this.readAppCommand('bm dump -n ' + bundle);
+  }
+
+  async startAppEntry(bundle: string, command: string): Promise<string> {
+    if (!/^[A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)+$/.test(bundle) || !command.startsWith('aa start -b ' + bundle + ' ') ||
+      !/^aa start -b [A-Za-z0-9_.]+ (?:-m [A-Za-z0-9_.]+ -a [A-Za-z0-9_.]+|-A (?:ohos.want.action.home|action.system.home) -e entity.system.home)$/.test(command)) {
+      throw new Error('Invalid application entry');
+    }
+    return this.readAppCommand(command);
+  }
+
+  private async readAppCommand(command: string): Promise<string> {
+    if (this.closed || this.labelResolve || !fs.accessSync(this.directory + '/local-hdc-identity.json')) { throw new Error('本机连接尚未就绪'); }
+    let port = '';
+    try { port = (JSON.parse(fs.readTextSync(this.directory + '/local-activation.json')) as ActivationState).port; } catch (_) {}
+    if (!localDebugPort(port)) { throw new Error('无线调试端口无效'); }
+    this.labelBundle = 'app-command'; this.appCommand = command;
+    const result = new Promise<string>((resolve) => { this.labelResolve = resolve; });
+    this.activate(port).catch(() => { this.close(); });
+    return result;
+  }
+
+  async readCurrentLayout(): Promise<string> {
+    if (this.closed) { throw new Error('本机布局连接已关闭'); }
+    if (this.labelResolve) { throw new Error('本机布局请求尚未完成'); }
+    if (!fs.accessSync(this.directory + '/local-hdc-identity.json')) { return ''; }
+    let port = '';
+    try { port = (JSON.parse(fs.readTextSync(this.directory + '/local-activation.json')) as ActivationState).port; } catch (_) {}
+    if (!localDebugPort(port)) { return ''; }
+    if (this.authorized && Number(this.state.port) !== localDebugPort(port)) {
+      this.close(); throw new Error('无线调试端口已变更，请重试读取');
+    }
+    // A socket carries only sequential read-only layout requests. Each gets a
+    // fresh channel; late output/close packets can never satisfy the next read.
+    this.layoutRead = true; this.labelBundle = 'layout'; this.labelBytes = [];
+    this.layoutChunks = []; this.layoutByteCount = 0; this.layoutSuffix = '';
+    this.layoutChannel++;
+    this.layoutTiming = new LayoutReadTiming();
+    this.layoutTiming.startedAt = Date.now(); this.layoutTiming.reused = this.authorized;
+    const result = new Promise<string>((resolve, reject) => { this.labelResolve = resolve; this.layoutReject = reject; });
+    if (this.authorized) { this.sendLayout().catch((error: Error) => { this.fail(error.message); }); }
+    else { this.activate(port).catch(() => { this.close(); }); }
+    return result;
+  }
+
+  private async sendLayout(): Promise<void> {
+    this.sent = true;
+    this.layoutTiming.commandAt = Date.now();
+    const temp = '/data/local/tmp/quietstart-layout-' + this.session + '-' + this.layoutChannel + '.json';
+    const command = 'umask 077; /bin/timeout -k 1 2 uitest dumpLayout -p ' + temp + ' >' + temp + '.log 2>&1; ' +
+      'qs_layout_code=$?; if [ "$qs_layout_code" -eq 0 ] && [ -s ' + temp + ' ]; then cat ' + temp +
+      '; else echo "Layout CLI failed: exit=$qs_layout_code"; head -c 512 ' + temp + '.log; fi; ' +
+      'rm -f ' + temp + ' ' + temp + '.log; echo __QuietStartLabelEnd__';
+    await this.send(this.layoutChannel, 1001, this.encoder.encodeInto(command));
   }
 
   readState(): ActivationState {
@@ -113,6 +199,7 @@ export class LocalActivation implements WorkerShell {
     const port = localDebugPort(input);
     if (!port) { throw new Error('请填写无线调试页面显示的端口，或完整 IP 地址和端口。'); }
     if (!this.labelBundle && isDebugOnline(new DebugStore(this.directory).readStatus())) { return; }
+    if (!this.labelBundle) { new SupervisionStore(this.directory).setNotice(''); }
     this.state = new ActivationState();
     this.state.port = port.toString();
     this.state.startedAt = Date.now();
@@ -133,6 +220,7 @@ export class LocalActivation implements WorkerShell {
         this.write('local-hdc-identity.json', JSON.stringify(identity));
       }
       if (this.closed) { return; }
+      this.layoutTiming.keyReadyAt = Date.now();
       this.session = new DataView(cryptoFramework.createRandom().generateRandomSync(4).data.buffer).getUint32(0) || 1;
       this.tcp = socket.constructTCPSocketInstance();
       this.tcp.on('message', (info: socket.SocketMessageInfo) => {
@@ -142,15 +230,16 @@ export class LocalActivation implements WorkerShell {
         }).catch((error: Error) => { this.fail(error.message); });
       });
       this.tcp.on('error', (error: BusinessError) => {
-        if (!this.sent) { this.fail('本机调试连接失败（' + error.code + '），请检查无线调试开关和端口。'); }
+        if (this.layoutRead || !this.sent) { this.fail('本机调试连接失败（' + error.code + '），请检查无线调试开关和端口。'); }
       });
       this.tcp.on('close', () => {
-        if (!this.closed && !this.sent) { this.fail('系统关闭了调试连接，请重新开启无线调试后再试。'); }
+        if (!this.closed && (this.layoutRead || !this.sent)) { this.fail('系统关闭了调试连接，请重新开启无线调试后再试。'); }
       });
       this.save('正在连接本机无线调试端口…');
       // Loopback is intentional: no LAN/cloud host receives debug traffic or keys.
       await this.tcp.connect({ address: { address: '127.0.0.1', family: 1, port: port }, timeout: 5000 });
       if (this.closed) { return; }
+      this.layoutTiming.connectedAt = Date.now();
       this.save('正在认证；若系统询问，请信任“轻启本机激活”。');
       await this.handshake(0, 'authtype'.padEnd(16) + '1'.padEnd(16) + '1');
     } catch (error) {
@@ -171,15 +260,15 @@ export class LocalActivation implements WorkerShell {
   private async send(channel: number, command: number, data: Uint8Array): Promise<void> {
     if (this.closed || !this.tcp) { return; }
     const frame = hdcFrame(channel, command, data);
-    hilog.info(0, 'QuietStartLocal', 'send channel=%{public}d command=%{public}d bytes=%{public}d', channel, command, frame.length);
+    if (!this.layoutRead) { hilog.info(0, 'QuietStartLocal', 'send channel=%{public}d command=%{public}d bytes=%{public}d', channel, command, frame.length); }
     await this.tcp.send({ data: frame.buffer as ArrayBuffer });
-    hilog.info(0, 'QuietStartLocal', 'sent channel=%{public}d command=%{public}d', channel, command);
+    if (!this.layoutRead) { hilog.info(0, 'QuietStartLocal', 'sent channel=%{public}d command=%{public}d', channel, command); }
   }
 
   private text(data: Uint8Array): string { return new util.TextDecoder('utf-8').decodeToString(data); }
 
   private async receive(packet: HdcPacket): Promise<void> {
-    hilog.info(0, 'QuietStartLocal', 'recv channel=%{public}d command=%{public}d bytes=%{public}d', packet.channel, packet.command, packet.data.length);
+    if (!this.layoutRead) { hilog.info(0, 'QuietStartLocal', 'recv channel=%{public}d command=%{public}d bytes=%{public}d', packet.channel, packet.command, packet.data.length); }
     if (packet.command === 1 && packet.channel === 0) {
       const fields = readFields(packet.data);
       const banner = this.text(fields.find((f: HdcField) => f.id === 1)?.data ?? new Uint8Array(0));
@@ -203,6 +292,7 @@ export class LocalActivation implements WorkerShell {
         const reason = hdcTlvValue(this.text(body), 'emgmsg');
         if (status === 'SUCCESS' && !this.sent) {
           this.authorized = true;
+          this.layoutTiming.authorizedAt = Date.now();
           this.save('本机认证成功，正在完成调试连接…');
         } else if (reason.includes('E000002')) {
           this.save('请在系统弹窗中选择“始终信任”：轻启本机激活。');
@@ -233,17 +323,19 @@ export class LocalActivation implements WorkerShell {
         if (Number(match[1]) !== 0) { reject?.(new Error('工作模块准备失败：' + output.slice(0, match.index).slice(-500))); }
         else { resolve(output.slice(0, match.index).trim()); }
       }
-    } else if (packet.channel === 101 && (packet.command === 10 || packet.command === 9)) {
+    } else if (packet.channel === (this.layoutRead ? this.layoutChannel : 101) && (packet.command === 10 || packet.command === 9)) {
+      if (this.layoutRead) { this.receiveLayout(packet.data); return; }
       if (this.labelBundle) {
         for (const byte of packet.data) { this.labelBytes.push(byte); }
-        if (this.labelBytes.length > 4096) { this.close(); return; }
+        if (this.labelBytes.length > (this.layoutRead || this.appCommand ? 4194304 : 4096)) { this.close(); return; }
         const output = this.text(new Uint8Array(this.labelBytes));
         const end = output.indexOf('__QuietStartLabelEnd__');
         if (end >= 0) {
           const value = output.slice(0, end).trim();
+
           const valid = value.length > 0 && value.length <= 80 && !/[\r\n]/.test(value) &&
             !/^(error|failed|usage|permission|\[fail\])/i.test(value) && value !== this.labelBundle;
-          this.labelResolve?.(valid ? value : ''); this.labelResolve = undefined; this.close();
+          this.labelResolve?.(this.appCommand ? value : valid ? value : ''); this.labelResolve = undefined; this.close();
         }
         return;
       }
@@ -253,6 +345,27 @@ export class LocalActivation implements WorkerShell {
         this.fail('系统启动会话失败：' + this.state.commandOutput.slice(-500));
       } else { this.save(this.state.message); }
     }
+  }
+
+  private receiveLayout(data: Uint8Array): void {
+    if (!this.labelResolve) { return; }
+    if (!this.layoutTiming.firstByteAt) { this.layoutTiming.firstByteAt = Date.now(); }
+    this.layoutByteCount += data.length;
+    if (this.layoutByteCount > 4194304) { this.fail('本机布局响应超过 4 MiB'); return; }
+    this.layoutChunks.push(data);
+    // The sentinel is ASCII. Scan only the suffix until complete, then join and
+    // decode UTF-8 once (including code points split across transport packets).
+    let tail = '';
+    for (let i = Math.max(0, data.length - 64); i < data.length; i++) { tail += String.fromCharCode(data[i]); }
+    this.layoutSuffix = (this.layoutSuffix + tail).slice(-128);
+    if (!this.layoutSuffix.includes('__QuietStartLabelEnd__')) { return; }
+    const output = this.text(joinBytes(this.layoutChunks));
+    const value = output.slice(0, output.indexOf('__QuietStartLabelEnd__')).trim();
+    if (!value.startsWith('{')) { this.fail('布局命令未返回 JSON：' + value.slice(0, 200)); return; }
+    this.layoutTiming.finishedAt = Date.now(); this.layoutTiming.bytes = this.layoutByteCount;
+    this.layoutIdleAt = Date.now(); this.layoutChunks = []; this.layoutSuffix = '';
+    const resolve = this.labelResolve; this.layoutReject = undefined; this.labelResolve = undefined;
+    resolve(value);
   }
 
   async execute(command: string): Promise<string> {
@@ -309,8 +422,13 @@ export class LocalActivation implements WorkerShell {
     if (this.sent || this.closed || !this.authorized) { return; }
     if (this.labelBundle) {
       this.sent = true;
+      if (this.layoutRead) {
+        await this.sendLayout(); return;
+      }
       // Bundle is strictly validated; query ONLY the foreground app's display label.
-      await this.send(101, 1001, this.encoder.encodeInto('bm dump -n ' + this.labelBundle + ' -l; echo __QuietStartLabelEnd__'));
+      await this.send(101, 1001, this.encoder.encodeInto(this.appCommand ?
+        '/bin/timeout 5 ' + this.appCommand + '; echo __QuietStartLabelEnd__' :
+        'bm dump -n ' + this.labelBundle + ' -l; echo __QuietStartLabelEnd__'));
       return;
     }
     const account = await osAccount.getAccountManager().getOsAccountLocalId();
@@ -318,6 +436,9 @@ export class LocalActivation implements WorkerShell {
     const store = new LocalStore(this.directory);
     const settings = store.readSettings();
     settings.stopRequested = false;
+    // An explicit new connection enables skipping. Automatic supervisor
+    // recovery does not use this path and preserves the user's pause switch.
+    settings.enabled = true;
     store.saveSettings(settings);
     new SystemExitStore(this.directory).markExpected('activation');
     const token = this.state.startedAt.toString();
@@ -333,6 +454,11 @@ export class LocalActivation implements WorkerShell {
 
   private checkProgress(): void {
     if (this.closed) { return; }
+    if (this.layoutRead) {
+      if (this.labelResolve && Date.now() - this.layoutTiming.startedAt > 5000) { this.fail('本机布局读取超过 5 秒'); }
+      else if (!this.labelResolve && Date.now() - this.layoutIdleAt > 15000) { this.close(); }
+      return;
+    }
     if (this.labelBundle) { if (Date.now() - this.state.startedAt > 10000) { this.close(); } return; }
     const status = new DebugStore(this.directory).readStatus();
     if (isDebugOnline(status) && status.startedAt >= this.state.startedAt) {
@@ -349,12 +475,15 @@ export class LocalActivation implements WorkerShell {
     if (this.closed) { return; }
     this.state.phase = 'error';
     this.state.finishedAt = Date.now();
+    if (this.layoutRead) { this.layoutReject?.(new Error(message)); this.layoutReject = undefined; }
     this.save(message);
     this.close();
   }
 
   close(): void {
     this.closed = true;
+    this.layoutChunks = []; this.layoutSuffix = "";
+    this.layoutReject?.(new Error('本机布局连接结束：超时、响应过大或连接中断')); this.layoutReject = undefined;
     clearTimeout(this.commandTimer);
     const reject = this.commandReject; this.commandReject = undefined; this.commandResolve = undefined;
     reject?.(new Error(this.state.message || '本机连接已关闭'));

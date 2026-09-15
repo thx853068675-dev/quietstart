@@ -15,6 +15,17 @@ export function desktopAppNames(text: string, bundles: string[]): Record<string,
     const a = node.attributes ?? {};
     if (a.bundleName) { desktop = a.bundleName === 'com.ohos.sceneboard' && visible(a); }
     if (desktop && !visible(a)) { return; }
+    // HarmonyOS 6.1 renders the caption beside the image, with its own exact
+    // bundle identity. API 26 also has launcher variants using this format.
+    if (desktop && a.type === 'Text' && /^(AppNameLite_text_|AppName_text_)/.test(a.id ?? '')) {
+      const identity = (a.id ?? '').replace(/^(AppNameLite_text_|AppName_text_)/, '');
+      const matches = bundles.filter((bundle: string) => identity.startsWith(bundle + '_'));
+      const label = (a.text ?? '').trim();
+      if (matches.length === 1 && label && label.length <= 80 && !/[\r\n]/.test(label) && label !== matches[0]) {
+        result[matches[0]] = label;
+      }
+      return;
+    }
     const prefix = 'Container_AppIcon_Image_';
     if (desktop && (a.id ?? '').startsWith(prefix)) {
       const identity = a.id.substring(prefix.length);
@@ -43,4 +54,3 @@ export function desktopAppNames(text: string, bundles: string[]): Record<string,
   } catch (_) { return {}; }
   return result;
 }
-

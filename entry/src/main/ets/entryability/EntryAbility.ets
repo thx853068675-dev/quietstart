@@ -1,17 +1,19 @@
+import { armSupervisionStress } from '../core/SupervisionStressProbe';
 import { AbilityConstant, Configuration, UIAbility, Want, bundleManager } from '@kit.AbilityKit';
 import { deviceInfo } from '@kit.BasicServicesKit';
 import { util } from '@kit.ArkTS';
-import { hilog } from '@kit.PerformanceAnalysisKit';
+import { hilog, hiAppEvent } from '@kit.PerformanceAnalysisKit';
 import { window } from '@kit.ArkUI';
 import { LocalStore } from '../core/LocalStore';
 import { themeColorMode, themeIsDark } from '../core/Theme';
-import { SystemExitStore, ExitEnvironment, userRequestedExit } from '../core/SystemExitStore';
+import { SystemExitStore, ExitEnvironment, systemUserRequestedExit, shouldStopRecovery } from '../core/SystemExitStore';
 import { SupervisionStore } from '../core/SupervisionStore';
-import { DebugStore, exhaustedRecovery } from '../core/DebugStore';
+import { DebugStore } from '../core/DebugStore';
 
 const DOMAIN = 0x0000;
 
 export default class EntryAbility extends UIAbility {
+  private faultWatcher?: hiAppEvent.Watcher;
   private mainWindow?: window.Window;
   private cancelledRecovery: boolean = false;
   private backgroundAfterRecovery: boolean = false;
@@ -21,7 +23,7 @@ export default class EntryAbility extends UIAbility {
     const token = want.parameters?.['quietstartRecoveryToken'];
     if (typeof token !== 'string' || s.read().token !== token) { return ''; }
     if (want.parameters?.['quietstartSupervisorState'] === 'exhausted') {
-      s.stop(); s.setNotice('自动恢复已达 3 次上限，请重新连接。退出记录已保留。');
+      s.stop(); s.setNotice('连续 4 次未能恢复，已停止自动恢复以节省电量，请重新连接。');
     }
     const reason = want.parameters?.['quietstartRecoveryReason'];
     return typeof reason === 'string' ? reason : '';
@@ -42,16 +44,24 @@ export default class EntryAbility extends UIAbility {
       const recovery = this.recoverySignal(want);
       const supervision = new SupervisionStore(directory);
       const control = supervision.read();
-      if (typeof want.parameters?.['quietstartRecoveryToken'] !== 'string' && control.active &&
-        exhaustedRecovery(new DebugStore(directory).readStatus(), control.token)) {
-        supervision.stop(); supervision.setNotice('上次连接已中断，3 次自动恢复已用完，请重新连接。退出记录已保留。');
-      }
+      const ownRecovery = want.parameters?.['quietstartRecoveryToken'] === control.token && control.active;
+      const events = want.parameters?.['quietstartSupervisorEvents'];
+      if ((ownRecovery || (want.parameters?.['quietstartRecoveryToken'] === control.token &&
+        want.parameters?.['quietstartSupervisorState'] === 'exhausted')) && typeof events === 'string') { new SystemExitStore(directory).importSupervisorEvents(events, control.token); }
+      const intent = want.parameters?.['quietstartStopIntent'];
       const row = new SystemExitStore(directory).capture(launch, environment, recovery,
-        Number(want.parameters?.['quietstartRecoveryAttempt'] ?? 0));
-      const userStopped = userRequestedExit(row.reason, row.message);
-      if ((row.reason === 8 || userStopped) && !['activation', 'module-install'].includes(row.expectedAction)) {
+        Number(want.parameters?.['quietstartRecoveryAttempt'] ?? -1), ownRecovery && typeof intent === 'string' && intent.length < 1024 ? intent : '');
+      if (want.parameters?.['quietstartRecoveryToken'] === control.token &&
+        want.parameters?.['quietstartSupervisorState'] === 'exhausted') {
+        // The budget shutdown itself may be reported as User Request. Keep
+        // the exhausted notice rather than blaming this stop on the user.
+        this.cancelledRecovery = true; return;
+      }
+      const userStopped = systemUserRequestedExit(row);
+      if (shouldStopRecovery(row)) {
         const s = new SupervisionStore(directory); s.stop();
-        s.setNotice(userStopped ? '最近任务已结束，自动恢复同步停止。需要时可重新连接。' : '应用已升级，请重新连接以启动对应工作模块。');
+        s.setNotice(userStopped ? '系统报告终止请求，自动恢复已停止。若并未清理最近任务，请导出运行诊断。' :
+          '本次连接已结束，可重新连接。');
         this.cancelledRecovery = typeof want.parameters?.['quietstartRecoveryToken'] === 'string';
       }
       if (recovery && !this.cancelledRecovery) { new SystemExitStore(directory).markExpected('worker-restart'); }
@@ -80,6 +90,24 @@ export default class EntryAbility extends UIAbility {
 
   onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {
     this.captureExit(want, launchParam);
+    try {
+      const directory = this.context.getApplicationContext().filesDir;
+      this.faultWatcher = {
+        name: 'quietstart_lifecycle',
+        appEventFilters: [{ domain: hiAppEvent.domain.OS,
+          names: [hiAppEvent.event.APP_KILLED, hiAppEvent.event.APP_CRASH, hiAppEvent.event.APP_FREEZE] }],
+        onReceive: (_domain: string, groups: hiAppEvent.AppEventGroup[]) => {
+          for (const group of groups) {
+            for (const event of group.appEventInfos) {
+              try { new SystemExitStore(directory).recordFaultEvent(event.name, event.params as Record<string, Object>); }
+              catch (_) {}
+            }
+          }
+        }
+      };
+      hiAppEvent.addWatcher(this.faultWatcher);
+    } catch (error) { hilog.warn(DOMAIN, 'QuietStartExit', 'System event subscription unavailable: %{public}s', String(error)); }
+    armSupervisionStress(this.context.getApplicationContext().filesDir, want);
     const recoveryToken = want.parameters?.['quietstartRecoveryToken'];
     this.backgroundAfterRecovery = !this.cancelledRecovery && typeof recoveryToken === 'string' &&
       typeof want.parameters?.['quietstartRecoveryReason'] === 'string' &&
@@ -94,12 +122,14 @@ export default class EntryAbility extends UIAbility {
 
   onNewWant(want: Want, launchParam: AbilityConstant.LaunchParam): void {
     this.recoverySignal(want);
+    armSupervisionStress(this.context.getApplicationContext().filesDir, want);
     this.resumeInstallation(want);
     if (want.parameters?.['quietstartOpenRules'] === true) { AppStorage.setOrCreate<boolean>('quietstartOpenRules', true); }
     if (want.parameters?.['quietstartOpenRecords'] === true) { AppStorage.setOrCreate<boolean>('quietstartOpenRecords', true); }
   }
 
   onDestroy(): void {
+    if (this.faultWatcher) { try { hiAppEvent.removeWatcher(this.faultWatcher); } catch (_) {} this.faultWatcher = undefined; }
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onDestroy');
   }
 

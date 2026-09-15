@@ -1,0 +1,746 @@
+{
+  "attributes": {
+    "bounds": "[0,0][1260,2844]",
+    "clickable": "",
+    "description": "",
+    "enabled": "",
+    "focused": "",
+    "hitTestBehavior": "",
+    "hostWindowId": "",
+    "id": "",
+    "opacity": "",
+    "origBounds": "",
+    "text": "",
+    "type": "",
+    "zIndex": ""
+  },
+  "children": [
+    {
+      "attributes": {
+        "bounds": "[0,0][1260,2844]",
+        "bundleName": "com.jiaxiao.driveharmony",
+        "clickable": "false",
+        "description": "",
+        "enabled": "true",
+        "focused": "true",
+        "hitTestBehavior": "HitTestMode.Default",
+        "hostWindowId": "108",
+        "id": "",
+        "opacity": "1.000000",
+        "origBounds": "[0,0][1260,2844]",
+        "text": "",
+        "type": "root",
+        "visible": "true",
+        "zIndex": "0"
+      },
+      "children": [
+        {
+          "attributes": {
+            "bounds": "[0,0][1260,2844]",
+            "clickable": "false",
+            "description": "",
+            "enabled": "true",
+            "focused": "true",
+            "hitTestBehavior": "HitTestMode.Default",
+            "hostWindowId": "108",
+            "id": "",
+            "opacity": "1.000000",
+            "origBounds": "[0,0][1260,2844]",
+            "text": "",
+            "type": "Navigation",
+            "visible": "true",
+            "zIndex": "0"
+          },
+          "children": [
+            {
+              "attributes": {
+                "bounds": "[0,0][1260,2844]",
+                "clickable": "false",
+                "description": "",
+                "enabled": "true",
+                "focused": "false",
+                "hitTestBehavior": "HitTestMode.Default",
+                "hostWindowId": "108",
+                "id": "",
+                "opacity": "1.000000",
+                "origBounds": "[0,0][1260,2844]",
+                "text": "",
+                "type": "NavigationContent",
+                "visible": "true",
+                "zIndex": "0"
+              },
+              "children": [
+                {
+                  "attributes": {
+                    "bounds": "[0,0][1260,2844]",
+                    "clickable": "false",
+                    "description": "",
+                    "enabled": "true",
+                    "focused": "true",
+                    "hitTestBehavior": "HitTestMode.Default",
+                    "hostWindowId": "108",
+                    "id": "",
+                    "opacity": "1.000000",
+                    "origBounds": "[0,0][1260,2844]",
+                    "text": "",
+                    "type": "NavDestination",
+                    "visible": "true",
+                    "zIndex": "0"
+                  },
+                  "children": [
+                    {
+                      "attributes": {
+                        "bounds": "[0,0][1260,2844]",
+                        "clickable": "false",
+                        "description": "",
+                        "enabled": "true",
+                        "focused": "false",
+                        "hitTestBehavior": "HitTestMode.Default",
+                        "hostWindowId": "108",
+                        "id": "",
+                        "opacity": "1.000000",
+                        "origBounds": "[0,0][1260,2844]",
+                        "text": "",
+                        "type": "NavDestinationContent",
+                        "visible": "true",
+                        "zIndex": "0"
+                      },
+                      "children": [
+                        {
+                          "attributes": {
+                            "bounds": "[0,0][1260,2844]",
+                            "clickable": "false",
+                            "description": "",
+                            "enabled": "true",
+                            "focused": "false",
+                            "hitTestBehavior": "HitTestMode.Default",
+                            "hostWindowId": "108",
+                            "id": "",
+                            "opacity": "1.000000",
+                            "origBounds": "[0,0][1260,2844]",
+                            "text": "",
+                            "type": "NodeContainer",
+                            "visible": "true",
+                            "zIndex": "0"
+                          },
+                          "children": [
+                            {
+                              "attributes": {
+                                "bounds": "[0,0][1260,2844]",
+                                "clickable": "false",
+                                "description": "",
+                                "enabled": "true",
+                                "focused": "false",
+                                "hitTestBehavior": "HitTestMode.Default",
+                                "hostWindowId": "108",
+                                "id": "",
+                                "opacity": "1.000000",
+                                "origBounds": "[0,0][1260,2844]",
+                                "text": "",
+                                "type": "BuilderProxyNode",
+                                "visible": "true",
+                                "zIndex": "0"
+                              },
+                              "children": [
+                                {
+                                  "attributes": {
+                                    "bounds": "[0,0][1260,2844]",
+                                    "clickable": "false",
+                                    "description": "",
+                                    "enabled": "true",
+                                    "focused": "false",
+                                    "hitTestBehavior": "HitTestMode.Default",
+                                    "hostWindowId": "108",
+                                    "id": "",
+                                    "opacity": "1.000000",
+                                    "origBounds": "[0,0][1260,2844]",
+                                    "text": "",
+                                    "type": "Stack",
+                                    "visible": "true",
+                                    "zIndex": "0"
+                                  },
+                                  "children": [
+                                    {
+                                      "attributes": {
+                                        "bounds": "[0,0][1260,2844]",
+                                        "clickable": "false",
+                                        "description": "",
+                                        "enabled": "true",
+                                        "focused": "false",
+                                        "hitTestBehavior": "HitTestMode.Default",
+                                        "hostWindowId": "108",
+                                        "id": "",
+                                        "opacity": "1.000000",
+                                        "origBounds": "[0,0][1260,2844]",
+                                        "text": "",
+                                        "type": "Column",
+                                        "visible": "true",
+                                        "zIndex": "0"
+                                      },
+                                      "children": [
+                                        {
+                                          "attributes": {
+                                            "bounds": "[0,0][1260,2844]",
+                                            "clickable": "false",
+                                            "description": "",
+                                            "enabled": "true",
+                                            "focused": "false",
+                                            "hitTestBehavior": "HitTestMode.Default",
+                                            "hostWindowId": "108",
+                                            "id": "5c754987-0452-4ec8-9dcc-76e90128e69d",
+                                            "opacity": "1.000000",
+                                            "origBounds": "[0,0][1260,2844]",
+                                            "text": "",
+                                            "type": "Stack",
+                                            "visible": "true",
+                                            "zIndex": "0"
+                                          },
+                                          "children": [
+                                            {
+                                              "attributes": {
+                                                "bounds": "[0,0][1260,2844]",
+                                                "clickable": "false",
+                                                "description": "",
+                                                "enabled": "true",
+                                                "focused": "false",
+                                                "hitTestBehavior": "HitTestMode.Default",
+                                                "hostWindowId": "108",
+                                                "id": "",
+                                                "opacity": "1.000000",
+                                                "origBounds": "[0,0][1260,2844]",
+                                                "text": "",
+                                                "type": "NodeContainer",
+                                                "visible": "true",
+                                                "zIndex": "0"
+                                              },
+                                              "children": [
+                                                {
+                                                  "attributes": {
+                                                    "bounds": "[0,0][1260,2844]",
+                                                    "clickable": "false",
+                                                    "description": "",
+                                                    "enabled": "true",
+                                                    "focused": "false",
+                                                    "hitTestBehavior": "HitTestMode.None",
+                                                    "hostWindowId": "108",
+                                                    "id": "",
+                                                    "opacity": "1.000000",
+                                                    "origBounds": "[0,0][1260,2844]",
+                                                    "text": "",
+                                                    "type": "Flex",
+                                                    "visible": "true",
+                                                    "zIndex": "0"
+                                                  },
+                                                  "children": [
+                                                    {
+                                                      "attributes": {
+                                                        "bounds": "[0,0][1260,2844]",
+                                                        "clickable": "false",
+                                                        "description": "",
+                                                        "enabled": "true",
+                                                        "focused": "false",
+                                                        "hitTestBehavior": "HitTestMode.Default",
+                                                        "hostWindowId": "108",
+                                                        "id": "",
+                                                        "opacity": "1.000000",
+                                                        "origBounds": "[0,0][1260,2844]",
+                                                        "text": "",
+                                                        "type": "Stack",
+                                                        "visible": "true",
+                                                        "zIndex": "0"
+                                                      },
+                                                      "children": [
+                                                        {
+                                                          "attributes": {
+                                                            "bounds": "[0,0][1260,2844]",
+                                                            "clickable": "false",
+                                                            "description": "",
+                                                            "enabled": "true",
+                                                            "focused": "false",
+                                                            "hitTestBehavior": "HitTestMode.Default",
+                                                            "hostWindowId": "108",
+                                                            "id": "aaa38e1b-c7b4-4a14-995e-8b412234c9ba",
+                                                            "opacity": "1.000000",
+                                                            "origBounds": "[0,0][1260,2844]",
+                                                            "text": "",
+                                                            "type": "Stack",
+                                                            "visible": "true",
+                                                            "zIndex": "0"
+                                                          },
+                                                          "children": [
+                                                            {
+                                                              "attributes": {
+                                                                "bounds": "[0,0][1260,2844]",
+                                                                "clickable": "false",
+                                                                "description": "",
+                                                                "enabled": "true",
+                                                                "focused": "false",
+                                                                "hitTestBehavior": "HitTestMode.Default",
+                                                                "hostWindowId": "108",
+                                                                "id": "",
+                                                                "opacity": "1.000000",
+                                                                "origBounds": "[0,0][1260,2844]",
+                                                                "text": "",
+                                                                "type": "XComponent",
+                                                                "visible": "true",
+                                                                "zIndex": "0"
+                                                              },
+                                                              "children": []
+                                                            },
+                                                            {
+                                                              "attributes": {
+                                                                "bounds": "[0,0][1260,2844]",
+                                                                "clickable": "false",
+                                                                "description": "",
+                                                                "enabled": "true",
+                                                                "focused": "false",
+                                                                "hitTestBehavior": "HitTestMode.Default",
+                                                                "hostWindowId": "108",
+                                                                "id": "",
+                                                                "opacity": "1.000000",
+                                                                "origBounds": "[0,0][1260,2844]",
+                                                                "text": "",
+                                                                "type": "__Common__",
+                                                                "visible": "true",
+                                                                "zIndex": "0"
+                                                              },
+                                                              "children": [
+                                                                {
+                                                                  "attributes": {
+                                                                    "bounds": "[0,0][1260,2844]",
+                                                                    "clickable": "false",
+                                                                    "description": "",
+                                                                    "enabled": "true",
+                                                                    "focused": "false",
+                                                                    "hitTestBehavior": "HitTestMode.Default",
+                                                                    "hostWindowId": "108",
+                                                                    "id": "",
+                                                                    "opacity": "1.000000",
+                                                                    "origBounds": "[0,0][1260,2844]",
+                                                                    "text": "",
+                                                                    "type": "Stack",
+                                                                    "visible": "true",
+                                                                    "zIndex": "0"
+                                                                  },
+                                                                  "children": [
+                                                                    {
+                                                                      "attributes": {
+                                                                        "bounds": "[0,2837][1260,2844]",
+                                                                        "clickable": "false",
+                                                                        "description": "",
+                                                                        "enabled": "true",
+                                                                        "focused": "false",
+                                                                        "hitTestBehavior": "HitTestMode.Default",
+                                                                        "hostWindowId": "108",
+                                                                        "id": "",
+                                                                        "opacity": "1.000000",
+                                                                        "origBounds": "[0,2837][1260,2844]",
+                                                                        "text": "",
+                                                                        "type": "Progress",
+                                                                        "visible": "true",
+                                                                        "zIndex": "0"
+                                                                      },
+                                                                      "children": []
+                                                                    },
+                                                                    {
+                                                                      "attributes": {
+                                                                        "bounds": "[0,0][1260,2844]",
+                                                                        "clickable": "false",
+                                                                        "description": "",
+                                                                        "enabled": "true",
+                                                                        "focused": "false",
+                                                                        "hitTestBehavior": "HitTestMode.Default",
+                                                                        "hostWindowId": "108",
+                                                                        "id": "",
+                                                                        "opacity": "1.000000",
+                                                                        "origBounds": "[0,0][1260,2844]",
+                                                                        "text": "",
+                                                                        "type": "__Common__",
+                                                                        "visible": "true",
+                                                                        "zIndex": "0"
+                                                                      },
+                                                                      "children": [
+                                                                        {
+                                                                          "attributes": {
+                                                                            "bounds": "[0,0][1260,2844]",
+                                                                            "clickable": "false",
+                                                                            "description": "",
+                                                                            "enabled": "true",
+                                                                            "focused": "false",
+                                                                            "hitTestBehavior": "HitTestMode.Default",
+                                                                            "hostWindowId": "108",
+                                                                            "id": "",
+                                                                            "opacity": "1.000000",
+                                                                            "origBounds": "[0,0][1260,2844]",
+                                                                            "text": "",
+                                                                            "type": "Image",
+                                                                            "visible": "true",
+                                                                            "zIndex": "0"
+                                                                          },
+                                                                          "children": []
+                                                                        }
+                                                                      ]
+                                                                    }
+                                                                  ]
+                                                                }
+                                                              ]
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    },
+                                                    {
+                                                      "attributes": {
+                                                        "bounds": "[0,1233][1260,2844]",
+                                                        "clickable": "false",
+                                                        "description": "",
+                                                        "enabled": "true",
+                                                        "focused": "false",
+                                                        "hitTestBehavior": "HitTestMode.None",
+                                                        "hostWindowId": "108",
+                                                        "id": "",
+                                                        "opacity": "0.500000",
+                                                        "origBounds": "[0,1233][1260,2844]",
+                                                        "text": "",
+                                                        "type": "Flex",
+                                                        "visible": "true",
+                                                        "zIndex": "0"
+                                                      },
+                                                      "children": []
+                                                    },
+                                                    {
+                                                      "attributes": {
+                                                        "bounds": "[0,0][1260,2844]",
+                                                        "clickable": "false",
+                                                        "description": "",
+                                                        "enabled": "true",
+                                                        "focused": "false",
+                                                        "hitTestBehavior": "HitTestMode.None",
+                                                        "hostWindowId": "108",
+                                                        "id": "",
+                                                        "opacity": "1.000000",
+                                                        "origBounds": "[0,0][1260,2844]",
+                                                        "text": "",
+                                                        "type": "Flex",
+                                                        "visible": "true",
+                                                        "zIndex": "0"
+                                                      },
+                                                      "children": [
+                                                        {
+                                                          "attributes": {
+                                                            "bounds": "[0,0][1260,2844]",
+                                                            "clickable": "false",
+                                                            "description": "",
+                                                            "enabled": "true",
+                                                            "focused": "false",
+                                                            "hitTestBehavior": "HitTestMode.Default",
+                                                            "hostWindowId": "108",
+                                                            "id": "",
+                                                            "opacity": "1.000000",
+                                                            "origBounds": "[0,0][1260,2844]",
+                                                            "text": "",
+                                                            "type": "Flex",
+                                                            "visible": "true",
+                                                            "zIndex": "0"
+                                                          },
+                                                          "children": []
+                                                        },
+                                                        {
+                                                          "attributes": {
+                                                            "bounds": "[0,2183][1260,2844]",
+                                                            "clickable": "false",
+                                                            "description": "",
+                                                            "enabled": "true",
+                                                            "focused": "false",
+                                                            "hitTestBehavior": "HitTestMode.Default",
+                                                            "hostWindowId": "108",
+                                                            "id": "",
+                                                            "opacity": "1.000000",
+                                                            "origBounds": "[-1165,2183][2426,5774]",
+                                                            "text": "",
+                                                            "type": "Flex",
+                                                            "visible": "true",
+                                                            "zIndex": "0"
+                                                          },
+                                                          "children": []
+                                                        },
+                                                        {
+                                                          "attributes": {
+                                                            "bounds": "[0,0][1260,2844]",
+                                                            "clickable": "false",
+                                                            "description": "",
+                                                            "enabled": "true",
+                                                            "focused": "false",
+                                                            "hitTestBehavior": "HitTestMode.None",
+                                                            "hostWindowId": "108",
+                                                            "id": "",
+                                                            "opacity": "1.000000",
+                                                            "origBounds": "[0,0][1260,2844]",
+                                                            "text": "",
+                                                            "type": "Flex",
+                                                            "visible": "true",
+                                                            "zIndex": "0"
+                                                          },
+                                                          "children": [
+                                                            {
+                                                              "attributes": {
+                                                                "bounds": "[478,2297][782,2486]",
+                                                                "clickable": "false",
+                                                                "description": "",
+                                                                "enabled": "true",
+                                                                "focused": "false",
+                                                                "hitTestBehavior": "HitTestMode.None",
+                                                                "hostWindowId": "108",
+                                                                "id": "",
+                                                                "opacity": "1.000000",
+                                                                "origBounds": "[478,2297][782,2486]",
+                                                                "text": "",
+                                                                "type": "Flex",
+                                                                "visible": "true",
+                                                                "zIndex": "0"
+                                                              },
+                                                              "children": [
+                                                                {
+                                                                  "attributes": {
+                                                                    "bounds": "[478,2297][782,2405]",
+                                                                    "clickable": "false",
+                                                                    "description": "",
+                                                                    "enabled": "true",
+                                                                    "focused": "false",
+                                                                    "hitTestBehavior": "HitTestMode.None",
+                                                                    "hostWindowId": "108",
+                                                                    "id": "",
+                                                                    "opacity": "1.000000",
+                                                                    "origBounds": "[478,2297][782,2405]",
+                                                                    "text": "",
+                                                                    "type": "Text",
+                                                                    "visible": "true",
+                                                                    "zIndex": "0"
+                                                                  },
+                                                                  "children": []
+                                                                },
+                                                                {
+                                                                  "attributes": {
+                                                                    "bounds": "[535,2405][725,2486]",
+                                                                    "clickable": "false",
+                                                                    "description": "",
+                                                                    "enabled": "true",
+                                                                    "focused": "false",
+                                                                    "hitTestBehavior": "HitTestMode.None",
+                                                                    "hostWindowId": "108",
+                                                                    "id": "",
+                                                                    "opacity": "1.000000",
+                                                                    "origBounds": "[535,2405][725,2486]",
+                                                                    "text": "",
+                                                                    "type": "Text",
+                                                                    "visible": "true",
+                                                                    "zIndex": "0"
+                                                                  },
+                                                                  "children": []
+                                                                }
+                                                              ]
+                                                            },
+                                                            {
+                                                              "attributes": {
+                                                                "bounds": "[1023,267][1193,355]",
+                                                                "clickable": "false",
+                                                                "description": "",
+                                                                "enabled": "true",
+                                                                "focused": "false",
+                                                                "hitTestBehavior": "HitTestMode.Default",
+                                                                "hostWindowId": "108",
+                                                                "id": "",
+                                                                "opacity": "1.000000",
+                                                                "origBounds": "[1023,267][1193,355]",
+                                                                "text": "",
+                                                                "type": "Flex",
+                                                                "visible": "true",
+                                                                "zIndex": "0"
+                                                              },
+                                                              "children": [
+                                                                {
+                                                                  "attributes": {
+                                                                    "bounds": "[1050,287][1142,334]",
+                                                                    "clickable": "false",
+                                                                    "description": "",
+                                                                    "enabled": "true",
+                                                                    "focused": "false",
+                                                                    "hitTestBehavior": "HitTestMode.None",
+                                                                    "hostWindowId": "108",
+                                                                    "id": "",
+                                                                    "opacity": "1.000000",
+                                                                    "origBounds": "[1050,287][1142,334]",
+                                                                    "text": "跳过 ",
+                                                                    "type": "Text",
+                                                                    "visible": "true",
+                                                                    "zIndex": "0"
+                                                                  },
+                                                                  "children": []
+                                                                },
+                                                                {
+                                                                  "attributes": {
+                                                                    "bounds": "[1142,287][1166,334]",
+                                                                    "clickable": "false",
+                                                                    "description": "",
+                                                                    "enabled": "true",
+                                                                    "focused": "false",
+                                                                    "hitTestBehavior": "HitTestMode.None",
+                                                                    "hostWindowId": "108",
+                                                                    "id": "",
+                                                                    "opacity": "1.000000",
+                                                                    "origBounds": "[1142,287][1166,334]",
+                                                                    "text": "5",
+                                                                    "type": "Text",
+                                                                    "visible": "true",
+                                                                    "zIndex": "0"
+                                                                  },
+                                                                  "children": []
+                                                                }
+                                                              ]
+                                                            },
+                                                            {
+                                                              "attributes": {
+                                                                "bounds": "[1071,2750][1220,2804]",
+                                                                "clickable": "false",
+                                                                "description": "",
+                                                                "enabled": "true",
+                                                                "focused": "false",
+                                                                "hitTestBehavior": "HitTestMode.None",
+                                                                "hostWindowId": "108",
+                                                                "id": "",
+                                                                "opacity": "1.000000",
+                                                                "origBounds": "[1071,2750][1220,2804]",
+                                                                "text": "",
+                                                                "type": "Image",
+                                                                "visible": "true",
+                                                                "zIndex": "0"
+                                                              },
+                                                              "children": []
+                                                            }
+                                                          ]
+                                                        },
+                                                        {
+                                                          "attributes": {
+                                                            "bounds": "[417,1764][843,2287]",
+                                                            "clickable": "false",
+                                                            "description": "",
+                                                            "enabled": "true",
+                                                            "focused": "false",
+                                                            "hitTestBehavior": "HitTestMode.None",
+                                                            "hostWindowId": "108",
+                                                            "id": "",
+                                                            "opacity": "1.000000",
+                                                            "origBounds": "[417,1764][843,2287]",
+                                                            "text": "",
+                                                            "type": "Flex",
+                                                            "visible": "true",
+                                                            "zIndex": "0"
+                                                          },
+                                                          "children": [
+                                                            {
+                                                              "attributes": {
+                                                                "bounds": "[589,2085][670,2163]",
+                                                                "clickable": "false",
+                                                                "description": "",
+                                                                "enabled": "true",
+                                                                "focused": "false",
+                                                                "hitTestBehavior": "HitTestMode.None",
+                                                                "hostWindowId": "108",
+                                                                "id": "",
+                                                                "opacity": "1.000000",
+                                                                "origBounds": "[589,2085][670,2163]",
+                                                                "text": "",
+                                                                "type": "Flex",
+                                                                "visible": "true",
+                                                                "zIndex": "0"
+                                                              },
+                                                              "children": []
+                                                            },
+                                                            {
+                                                              "attributes": {
+                                                                "bounds": "[589,2044][832,2287]",
+                                                                "clickable": "false",
+                                                                "description": "",
+                                                                "enabled": "true",
+                                                                "focused": "false",
+                                                                "hitTestBehavior": "HitTestMode.None",
+                                                                "hostWindowId": "108",
+                                                                "id": "",
+                                                                "opacity": "1.000000",
+                                                                "origBounds": "[589,2044][832,2287]",
+                                                                "text": "",
+                                                                "type": "Flex",
+                                                                "visible": "true",
+                                                                "zIndex": "0"
+                                                              },
+                                                              "children": [
+                                                                {
+                                                                  "attributes": {
+                                                                    "bounds": "[589,2044][670,2125]",
+                                                                    "clickable": "false",
+                                                                    "description": "",
+                                                                    "enabled": "true",
+                                                                    "focused": "false",
+                                                                    "hitTestBehavior": "HitTestMode.None",
+                                                                    "hostWindowId": "108",
+                                                                    "id": "",
+                                                                    "opacity": "1.000000",
+                                                                    "origBounds": "[589,2044][670,2125]",
+                                                                    "text": "",
+                                                                    "type": "Flex",
+                                                                    "visible": "true",
+                                                                    "zIndex": "0"
+                                                                  },
+                                                                  "children": []
+                                                                },
+                                                                {
+                                                                  "attributes": {
+                                                                    "bounds": "[589,2044][832,2287]",
+                                                                    "clickable": "false",
+                                                                    "description": "",
+                                                                    "enabled": "true",
+                                                                    "focused": "false",
+                                                                    "hitTestBehavior": "HitTestMode.None",
+                                                                    "hostWindowId": "108",
+                                                                    "id": "",
+                                                                    "opacity": "1.000000",
+                                                                    "origBounds": "[589,2044][832,2287]",
+                                                                    "text": "",
+                                                                    "type": "Image",
+                                                                    "visible": "true",
+                                                                    "zIndex": "0"
+                                                                  },
+                                                                  "children": []
+                                                                }
+                                                              ]
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    }
+                                                  ]
+                                                }
+                                              ]
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

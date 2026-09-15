@@ -4,7 +4,7 @@ import { RECOGNITION_STRATEGIES, RecognitionStrategy, RecognitionProfile, ruleSt
   profileForRule, shapeName, contentName, targetName, evidenceName, layerName, ProfileLayer, strategySample } from '../core/RecognitionProfile';
 import { WorkerInstaller } from '../core/WorkerInstaller';
 import { SupervisionStore } from '../core/SupervisionStore';
-import { SystemExitRecord, SystemExitStore, exitReasonLabel, userRequestedExit } from '../core/SystemExitStore';
+import { SystemExitRecord, systemExitTitle, SystemExitStore } from '../core/SystemExitStore';
 import { pasteboard } from '@kit.BasicServicesKit';
 import { PauseProgress, pauseProgress } from '../core/PauseProgress';
 import { strategyProblem, strategyPreview } from '../core/StrategyEditor';
@@ -122,6 +122,13 @@ struct Index {
   private activator?: LocalActivation;
   private refreshTimer: number = -1;
   private testTimer: number = -1;
+  @State catalogBusy: boolean = false;
+  @State catalogMessage: string = '';
+  @State learningPreparing: boolean = false;
+  private connectionTimer: number = -1;
+  private connectionHandledAt: number = 0;
+  private catalogSync?: Promise<boolean>;
+  private catalogCheckedAt: number = 0;
   private store?: LocalStore;
   private debugStore?: DebugStore;
   private learningStore?: LearningStore;
@@ -212,15 +219,20 @@ struct Index {
   }
 
   private syncForeground(): void {
-    if (!this.foreground) { this.reminderSliding = false; }
+    if (!this.foreground) {
+      this.reminderSliding = false;
+      clearInterval(this.connectionTimer); this.connectionTimer = -1;
+    }
     if (this.refreshTimer !== -1) { clearInterval(this.refreshTimer); this.refreshTimer = -1; }
     if (this.foreground && this.store) {
       this.refresh();
+      if (this.page === 1) { this.syncAppCatalog(); }
       this.refreshTimer = setInterval(() => { this.refresh(); }, 2000);
     }
   }
 
   aboutToDisappear(): void {
+    clearInterval(this.connectionTimer); this.connectionTimer = -1;
     clearInterval(this.refreshTimer);
     clearTimeout(this.testTimer);
   }
@@ -239,7 +251,7 @@ struct Index {
     const request = this.learningStore?.readManualRequest();
     const manual = this.learningStore?.readManualStatus();
     this.manualActive = !!request?.at && request.bundle === this.editingBundle && Date.now() < request.until &&
-      (manual?.at !== request.at || manual.state === 'listening');
+      (manual?.at !== request.at || ['listening', 'launching'].includes(manual.state));
     this.manualMessage = request?.bundle === this.editingBundle && manual?.at === request.at ? manual.message : '';
     if (this.foreground && request?.at && Date.now() <= request.until + 60000 && manual?.at === request.at &&
       ['saved', 'failed', 'expired', 'unsupported', 'cancelled'].includes(manual.state) && !this.learningStore?.manualResultAcknowledged(request.at)) {
@@ -282,6 +294,10 @@ struct Index {
     this.supervisionNotice = new SupervisionStore(context.getApplicationContext().filesDir).notice();
     this.activating = this.activation.startedAt > 0 && this.activation.finishedAt === 0 &&
       !this.online;
+    if (this.foreground && this.activation.startedAt > this.connectionHandledAt &&
+      (this.activating || (this.activation.success && Date.now() - this.activation.finishedAt < 10000))) {
+      this.watchConnection();
+    }
     const resume = AppStorage.get<string>('quietstartInstallResume') ?? '';
     if (resume) {
       AppStorage.set<string>('quietstartInstallResume', '');
@@ -317,16 +333,42 @@ struct Index {
     }
   }
 
+  private watchConnection(): void {
+    if (this.connectionTimer !== -1) { return; }
+    // Poll only small connection state files; leave rule/catalog refresh alone.
+    this.detail = ''; this.page = 0; this.wizardOpen = false;
+    this.tabsController.changeIndex(0);
+    this.connectionTimer = setInterval(() => {
+      const directory = (this.getUIContext().getHostContext() as common.UIAbilityContext).getApplicationContext().filesDir;
+      this.activation = new LocalActivation(directory).readState();
+      const status = new DebugStore(directory).readStatus();
+      const connected = isDebugOnline(status) && status.startedAt >= this.activation.startedAt;
+      if (connected || this.activation.finishedAt > 0) {
+        clearInterval(this.connectionTimer); this.connectionTimer = -1;
+        this.connectionHandledAt = this.activation.startedAt; this.activating = false;
+        if (connected) {
+          this.detail = ''; this.page = 0; this.tabsController.changeIndex(0);
+          if (this.wizardStep === 2) { this.onboarding?.save(3, true); this.wizardStep = 3; }
+        } else { this.detail = 'activation'; this.notice = this.activation.message; }
+        this.refresh();
+      } else { this.online = false; this.activating = true; }
+    }, 250);
+  }
+
   private async activateLocally(resumeToken: string = ''): Promise<void> {
     const resumeHash = resumeToken && resumeToken === this.activation.installToken && !this.activation.finishedAt ? this.activation.installHash : '';
     if ((this.activating && !resumeHash) || this.online) { return; }
-    this.activating = true;
+    this.activating = true; this.notice = ''; this.supervisionNotice = '';
     const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
     this.activator?.close();
     this.activator = new LocalActivation(context.getApplicationContext().filesDir,
       (shell, progress) => new WorkerInstaller(context.resourceManager, context.getApplicationContext().filesDir).ensure(shell, progress, resumeHash));
-    try { await this.activator.activate(resumeHash ? this.activation.port : this.debugPort); }
-    catch (error) { this.notice = (error as Error).message; }
+    try {
+      const connecting = this.activator.activate(resumeHash ? this.activation.port : this.debugPort);
+      this.refresh();
+      await connecting;
+    }
+    catch (error) { this.notice = (error as Error).message; this.detail = 'activation'; }
     this.refresh();
   }
 
@@ -392,11 +434,45 @@ struct Index {
     this.store.saveSettings(settings); this.refresh();
   }
 
+  private async syncAppCatalog(force: boolean = false): Promise<boolean> {
+    if (this.catalogSync) { return this.catalogSync; }
+    if (!this.online || !this.learningStore) { return false; }
+    if (!force && Date.now() - this.catalogCheckedAt < 30000) { return true; }
+    this.catalogBusy = true;
+    const directory = (this.getUIContext().getHostContext() as common.UIAbilityContext).getApplicationContext().filesDir;
+    const started = Date.now();
+    this.catalogSync = new LocalActivation(directory).readInstalledApps().then((text: string) => {
+      const removed = this.learningStore?.syncNativeCatalog(text, started) ?? 0;
+      this.catalogCheckedAt = Date.now();
+      this.catalogMessage = removed ? '已移出 ' + removed + ' 个已卸载应用，规则保留' : '';
+      this.refresh(); return true;
+    }).catch(() => {
+      this.catalogMessage = '暂未同步，已保留现有列表'; return false;
+    }).finally(() => { this.catalogBusy = false; this.catalogSync = undefined; });
+    return this.catalogSync;
+  }
+  private removeManagedApp(): void {
+    const bundle = this.editingBundle;
+    this.getUIContext().showAlertDialog({ title: '移出应用列表？',
+      message: '保留规则和备注名。再次打开此应用后会自动恢复到列表。',
+      primaryButton: { value: '取消', action: () => {} },
+      secondaryButton: { value: '移出', action: () => {
+        if (this.learningStore?.readManualRequest().bundle === bundle) { this.learningStore?.cancelManualLearning(); }
+        this.learningStore?.hideApp(bundle); this.go(1); this.refresh();
+      } }
+    });
+  }
+
   private async startManualLearning(): Promise<void> {
     if (!this.online) { this.notice = '请先完成本机连接，再开始强化学习。'; return; }
+    if (this.learningPreparing) { return; }
+    const bundle = this.editingBundle; this.learningPreparing = true;
     try {
+      if (!await this.syncAppCatalog(true)) { this.notice = '暂时无法检查应用状态，请确认本机连接后重试。'; return; }
+      if (bundle !== this.editingBundle || this.detail !== 'app' || !this.foreground) { return; }
+      if (this.learningStore?.appUnavailable(bundle)) { this.notice = '应用已卸载或已移出列表。重新安装并打开后可再次学习，原有规则已保留。'; return; }
       this.searchController.stopEditing(); this.searchEditing = false;
-      this.learningStore?.startManualLearning(this.editingBundle);
+      this.learningStore?.startManualLearning(bundle);
       if (this.store) {
         const settings = this.store.readSettings();
         settings.ignoredPackages = settings.ignoredPackages.filter((b: string) => b !== this.editingBundle);
@@ -407,7 +483,7 @@ struct Index {
       const request = this.learningStore?.readManualRequest();
       if (!request?.at) { throw new Error('学习请求未保存'); }
       let ready = false;
-      for (let attempt = 0; attempt < 30; attempt++) {
+      for (let attempt = 0; attempt < 80; attempt++) {
         if (this.learningStore?.readManualRequest().at !== request.at) { return; }
         const status = this.learningStore?.readManualStatus();
         if (status?.at === request.at) {
@@ -420,15 +496,12 @@ struct Index {
         this.learningStore?.saveManualStatus(request.at, 'failed', ready ? '轻启已离开前台，请返回后重新开始。' : '工作模块未能及时准备点击监听，请确认本机连接在线后重试。');
         this.refresh(); return;
       }
-      const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
-      try {
-        // Launch the selected app's declared home skill from the foreground UI.
-        // No SDK, shell query, guessed ability name or installed-app inventory.
-        await context.startAbility({ bundleName: request.bundle, action: 'ohos.want.action.home', entities: ['entity.system.home'] });
-      } catch (_) {
-        this.learningStore?.saveManualStatus(request.at, 'failed', '系统未能打开此应用的桌面入口。请确认应用可正常启动后重试。'); this.refresh();
-      }
-    } catch (_) { this.notice = '未能启动强化学习，请重试。'; }
+      // Resolve the declared entry on the phone; this also handles bridge apps
+      // that are absent from the native bundle catalog and icons inside folders.
+      this.learningStore?.saveManualStatus(request.at, 'launching', '正在打开应用…');
+      this.refresh();
+    } catch (_) { this.notice = '未能准备强化学习，请检查本机连接后重试。'; }
+    finally { this.learningPreparing = false; }
   }
   private setAutoEnable(value: boolean): void {
     if (!this.store) { return; }
@@ -585,6 +658,8 @@ struct Index {
   }
 
   private exitAction(row: SystemExitRecord): string {
+    if (row.selfStopVerified) { return '已核对监督终止命令、进程与时间'; }
+    if (row.recoveryReason) { return '恢复检查第 ' + row.recoveryAttempt + ' 次 · ' + row.recoveryReason; }
     if (row.expectedAction === 'activation') { return '本机连接启动'; }
     if (row.expectedAction === 'module-install') { return '工作模块安装'; }
     if (row.expectedAction === 'worker-restart') { return '工作会话重建'; }
@@ -596,15 +671,15 @@ struct Index {
   healthPage() {
     Column({ space: 12 }) {
       Text('退出记录').fontSize(20).fontWeight(FontWeight.Medium).fontColor($r('app.color.ink')).width('100%')
-      Text('系统在下次打开时提供退出原因。仅保留本机最近 20 条；未提供的信息不作推断。')
+      Text('包含系统退出原因与恢复时间线。未提供的原因不作推断。')
         .fontSize(12).lineHeight(19).fontColor($r('app.color.muted')).width('100%')
-      Button('复制完整记录').id('quietstart-copy-exits').height(40).width('100%').enabled(this.systemExits.length > 0)
+      Button('复制完整记录').id('quietstart-copy-exits').height(40).width('100%').enabled(true)
         .backgroundColor($r('app.color.soft')).fontColor($r('app.color.accent')).onClick(() => { this.copyExitRecords(); })
       if (!this.systemExits.length) { Text('尚无系统退出记录').fontSize(14).fontColor($r('app.color.muted')) }
       ForEach(this.systemExits, (row: SystemExitRecord) => {
         Column({ space: 8 }) {
           Row() {
-            Text(userRequestedExit(row.reason, row.message) ? '用户结束应用' : exitReasonLabel(row.reason)).fontSize(15).fontWeight(FontWeight.Medium).fontColor($r('app.color.ink')).layoutWeight(1)
+            Text(systemExitTitle(row)).fontSize(15).fontWeight(FontWeight.Medium).fontColor($r('app.color.ink')).layoutWeight(1)
             Text(this.timeLabel(row.detail?.timestamp || row.capturedAt)).fontSize(11).fontColor($r('app.color.muted'))
           }.width('100%')
           if (this.exitAction(row)) { Text(this.exitAction(row)).fontSize(12).fontColor($r('app.color.accent')).width('100%') }
@@ -654,7 +729,7 @@ struct Index {
 
   private appName(bundle: string): string {
     if (bundle === 'com.tonghongxiang.quietstart') { return '轻启'; }
-    return runtimeAppLabel(this.managedApps.find((app: InstalledApp) => app.bundleName === bundle)?.label || bundle || '暂无', this.androidApps.includes(bundle));
+    return runtimeAppLabel(this.managedApps.find((app: InstalledApp) => app.bundleName === bundle)?.label || this.learningStore?.displayName(bundle) || bundle || '暂无', this.androidApps.includes(bundle));
   }
 
   private resultLabel(result: string): string {
@@ -728,6 +803,7 @@ struct Index {
     this.detail = ''; this.page = index; this.notice = '';
     this.searchController.stopEditing(); this.searchEditing = false;
     this.tabsController.changeIndex(index);
+    if (index === 1) { this.syncAppCatalog(); }
   }
   private approvedCount(): number {
     return this.learnedRules.filter((rule: LearnedRule) => this.allowedPackages.includes(rule.bundle) && ruleState(rule, this.decisions) === 'approved').length;
@@ -743,6 +819,7 @@ struct Index {
     return '规则已就绪，正常使用即可';
   }
   private guideDescription(): string {
+    if (this.activating) { return this.activation.message || '正在建立本机连接…'; }
     if (!this.online) { return '开启开发者模式和无线调试，填写端口即可连接。'; }
     if (!this.skipEnabled) { return '开启后，仅跳过你已确认并启用的广告样式。'; }
     if (this.pendingCount()) { return '核对按钮文字与位置，启用后自动跳过。'; }
@@ -750,6 +827,7 @@ struct Index {
     return '新样式会出现在规则页。';
   }
   private guideAction(): string {
+    if (this.activating) { return ''; }
     if (!this.online) { return '开始本机连接'; }
     if (!this.skipEnabled) { return '开启自动跳过'; }
     if (this.pendingCount()) { return '去确认规则'; }
@@ -771,6 +849,7 @@ struct Index {
   private editApp(app: InstalledApp): void {
     this.renameOpen = false;
     this.editingBundle = app.bundleName; this.editingName = app.label === app.bundleName ? '' : app.label; this.detail = 'app';
+    this.syncAppCatalog();
   }
   private renameApp(): void {
     try { this.learningStore?.renameSeenApp(this.editingBundle, this.editingName); this.notice = '名称已保存。'; this.refresh(); }
@@ -857,10 +936,10 @@ struct Index {
         }.width('100%').alignItems(HorizontalAlign.Start).padding({ top: 4, bottom: 4 })
         Column({ space: 16 }) {
           Row({ space: 12 }) {
-            Text(this.online ? (this.skipEnabled ? '正在为你守候' : '暂歇片刻') : '连接后，即刻开始')
+            Text(this.activating ? '正在连接轻启' : this.online ? (this.skipEnabled ? '正在为你守候' : '暂歇片刻') : '连接后，即刻开始')
               .fontSize(22).fontWeight(FontWeight.Bold).fontColor($r('app.color.ink')).layoutWeight(1)
             Row({ space: 4 }) {
-              Text(this.online ? '在线' : '未连接').id('quietstart-debug-status').fontSize(12)
+              Text(this.activating ? '连接中' : this.online ? '在线' : '未连接').id('quietstart-debug-status').fontSize(12)
                 .fontColor(this.online ? $r('app.color.accent') : $r('app.color.warning'))
               if (this.online) { SymbolGlyph($r('sys.symbol.chevron_right')).fontSize(12).fontColor([$r('app.color.accent')]).width(14).height(20) }
             }.id('quietstart-connection-details').height(32).alignItems(VerticalAlign.Center).justifyContent(FlexAlign.Center)
@@ -871,7 +950,7 @@ struct Index {
           }.width('100%')
           Row() {
             Text('自动跳过').fontSize(15).fontColor($r('app.color.ink')).layoutWeight(1)
-            Toggle({ type: ToggleType.Switch, isOn: this.skipEnabled }).id('quietstart-toggle')
+            Toggle({ type: ToggleType.Switch, isOn: this.skipEnabled }).id('quietstart-toggle').enabled(!this.activating)
               .selectedColor($r('app.color.accent')).onChange((value: boolean) => { this.setEnabled(value); })
           }.width('100%')
           Row({ space: 14 }) {
@@ -881,6 +960,7 @@ struct Index {
           }.width('100%')
           Divider().color($r('app.color.line'))
           Column({ space: 6 }) {
+            if (this.activating) { LoadingProgress().width(24).height(24).color($r('app.color.accent')) }
             if (this.online) {
               Text(this.guideTitle()).fontSize(15).fontWeight(FontWeight.Medium).fontColor($r('app.color.ink')).width('100%')
             }
@@ -912,7 +992,15 @@ struct Index {
   @Builder
   appsPage() {
     Column({ space: 12 }) {
-      if (!this.searchEditing) { this.titleBlock('应用', '') }
+      if (!this.searchEditing) {
+        Row() {
+          Text('应用').fontSize(28).fontWeight(FontWeight.Bold).fontColor($r('app.color.ink')).layoutWeight(1)
+          Button(this.catalogBusy ? '同步中' : '刷新').id('quietstart-refresh-apps').height(32).fontSize(13)
+            .backgroundColor($r('app.color.soft')).fontColor($r('app.color.accent')).enabled(!this.catalogBusy && this.online)
+            .onClick(() => { this.syncAppCatalog(true); })
+        }.width('100%')
+        if (this.catalogMessage) { Text(this.catalogMessage).fontSize(12).fontColor($r('app.color.muted')).width('100%') }
+      }
       Search({ value: this.query, placeholder: '搜索当前分区的应用', controller: this.searchController }).id('quietstart-app-search')
         .width('100%').height(46).flexShrink(0).textFont({ size: 16 }).fontColor($r('app.color.ink'))
         .placeholderColor($r('app.color.muted')).searchIcon({ color: $r('app.color.accent') })
@@ -1424,7 +1512,7 @@ struct Index {
           .fontSize(12).fontColor($r('app.color.muted')).width('100%')
         Text('最近接口响应：' + this.timeLabel(this.debugStatus.rpcAt)).id('quietstart-session-rpc')
           .fontSize(12).fontColor($r('app.color.muted')).width('100%')
-        Text(this.debugStatus.supervisorToken ? '自动恢复已配置 · 已用 ' + this.debugStatus.recoveryAttempt + '/3 次' : '当前连接未配置自动恢复')
+        Text(this.debugStatus.supervisorToken ? '已尝试恢复 ' + this.debugStatus.recoveryAttempt + ' 次 · 连续失败最多 4 次' : '当前连接未配置自动恢复')
           .id('quietstart-supervision-summary').fontSize(12).fontColor($r('app.color.muted')).width('100%')
         if (this.supervisionNotice) { Text(this.supervisionNotice).fontSize(12).lineHeight(20).fontColor($r('app.color.warning')).width('100%') }
         Button('查看退出记录').height(32).width('100%').fontSize(12).backgroundColor($r('app.color.soft'))
@@ -1553,13 +1641,15 @@ struct Index {
         Text('强化学习').fontSize(16).fontWeight(FontWeight.Medium).fontColor($r('app.color.ink')).width('100%')
         Text('自动打开应用；系统询问时请选择“打开”。手动关闭广告后，将返回并显示结果。').fontSize(13).lineHeight(20).fontColor($r('app.color.muted')).width('100%')
         Text('等待最多 60 秒；新规则直接启用，原有规则保留。').fontSize(12).lineHeight(18).fontColor($r('app.color.muted')).width('100%')
-        Button(this.manualActive ? '取消本次学习' : '开始强化学习').id('quietstart-manual-learn').width('100%').height(44)
+        Button(this.manualActive ? '取消本次学习' : '开始强化学习').id('quietstart-manual-learn').enabled(!this.learningPreparing).width('100%').height(44)
           .backgroundColor($r('app.color.accent')).fontColor($r('app.color.on_accent'))
           .onClick(() => { if (this.manualActive) { this.learningStore?.cancelManualLearning(); this.notice = '已取消本次学习。'; this.refresh(); } else { this.startManualLearning(); } })
         if (this.manualMessage) { Text(this.manualMessage).fontSize(12).lineHeight(18).fontColor($r('app.color.accent')).width('100%') }
       }.padding(16).width('100%').borderRadius(18).backgroundColor($r('app.color.surface'))
       Button('查看规则').id('quietstart-app-rules').width('100%').height(40).fontColor($r('app.color.accent'))
         .backgroundColor($r('app.color.soft')).onClick(() => { this.ruleQuery = this.appName(this.editingBundle); this.showAllRules = true; this.go(2); })
+      Button('移出应用列表').id('quietstart-remove-app').height(40).width('100%')
+        .backgroundColor($r('app.color.soft')).fontColor($r('app.color.muted')).onClick(() => { this.removeManagedApp(); })
       Button(this.renameOpen ? '收起备注名编辑' : '修改备注名').id('quietstart-edit-app-name').height(40).width('100%')
         .backgroundColor($r('app.color.soft')).fontColor($r('app.color.accent')).onClick(() => { this.renameOpen = !this.renameOpen; })
       if (this.renameOpen) {
@@ -1728,7 +1818,7 @@ struct Index {
           TabContent() { this.settingsPage(); }.tabBar(BottomTabBarStyle.of({ normal: new SymbolGlyphModifier($r('sys.symbol.gearshape')) }, '设置').id('quietstart-tab-settings'))
         }.id('quietstart-bottom-navigation').vertical(false).barMode(BarMode.Fixed).barOverlap(true)
           .barFloatingStyle({ systemMaterialEffect: { materialType: hdsMaterial.MaterialType.IMMERSIVE, materialLevel: hdsMaterial.MaterialLevel.ADAPTIVE } })
-          .onChange((index: number) => { this.page = index; this.notice = ''; this.searchController.stopEditing(); this.searchEditing = false; })
+          .onChange((index: number) => { this.page = index; this.notice = ''; this.searchController.stopEditing(); this.searchEditing = false; if (index === 1) { this.syncAppCatalog(); } })
           .width('100%').layoutWeight(1)
       }
     }.width('100%').height('100%').backgroundColor($r('app.color.page_bg'))

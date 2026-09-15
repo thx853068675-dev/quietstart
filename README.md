@@ -2,7 +2,7 @@
 
 HarmonyOS 原生开屏广告辅助工具。在本机识别广告按钮、学习样式，支持确认启用、可选自动启用，以及手动示范学习。
 
-**当前源码版本：0.9.52** · 已验证：Pura X / HarmonyOS 7（API 26）。最低要求 6.1.1（API 24）；OS 6 的功能与后台稳定性尚未完成真机验证，见[兼容性排查](docs/LIFECYCLE.md#harmonyos-6-兼容性与后台被杀反馈)。
+**当前源码版本：0.9.55** · 最低要求 HarmonyOS 6.1.1（API 24）。已在 Pura 70 Pro / HarmonyOS 6.1 和 Pura X / HarmonyOS 7（API 26）验证识别与运行链路；6.1 的 30 分钟后台压力测试见[测试报告](docs/pressure-test-6.1-0.9.60.md)。
 
 ## 讨论群组
 QQ群: 1125359809
