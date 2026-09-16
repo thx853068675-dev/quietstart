@@ -2,6 +2,12 @@
 
 这里发布轻启的安装制品与版本说明。项目源码不在本仓库公开。
 
+## 交流与反馈
+
+QQ群：**1125359809**
+
+<img src="assets/qq-group.png" alt="轻启 QQ 群二维码" width="280" />
+
 ## 下载与安装
 
 请从 [Releases](https://github.com/thx853068675-dev/quietstart/releases) 下载最新版：
