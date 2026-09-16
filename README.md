@@ -10,6 +10,8 @@
 - **已经安装整合助手**：可单独下载 HAP。
 - 安装前请核对 Release 中提供的 SHA-256 校验值。
 
+整合包中的调试助手基于 [likuai2010](https://github.com/likuai2010) 的「小白调试助手」修改并集成轻启 HAP，感谢原作者的开发与贡献。原项目与官方下载：[auto-installer](https://github.com/likuai2010/auto-installer)。轻启整合版由本项目维护。
+
 HarmonyOS 应用的侧载签名与设备绑定；请使用整合助手为自己的设备完成签名和安装。
 
 ## QQ 交流群
