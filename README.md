@@ -1,18 +1,21 @@
 # 轻启
 
-HarmonyOS 原生开屏广告辅助工具。本机识别与学习，用户确认规则后自动跳过。
+HarmonyOS 原生开屏广告辅助工具。本机识别与学习，按启用的规则自动跳过。
 
 ## 下载与安装
 
-请从 [Releases](https://github.com/thx853068675-dev/quietstart/releases) 下载最新版：
+当前版本：**1.0.0**。请从 [Releases](https://github.com/thx853068675-dev/quietstart/releases/latest) 下载：
 
 - **首次安装**：选择对应平台的整合包。
 - **已经安装整合助手**：可单独下载 HAP。
+- **手机端更新**：已安装“小白·轻启”的用户，可在手机选择新 HAP 重签安装。
 - 安装前请核对 Release 中提供的 SHA-256 校验值。
 
 整合包中的调试助手基于 [likuai2010](https://github.com/likuai2010) 的「小白调试助手」修改并集成轻启 HAP，感谢原作者的开发与贡献。原项目与官方下载：[auto-installer](https://github.com/likuai2010/auto-installer)。轻启整合版由本项目维护。
 
 HarmonyOS 应用的侧载签名与设备绑定；请使用整合助手为自己的设备完成签名和安装。
+
+完整步骤见 [安装与升级说明](docs/INSTALL.md)。1.0.0 新增后台运行保护，需按提示授予后台定位权限。
 
 ## QQ 交流群
 
