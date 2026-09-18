@@ -1,14 +1,22 @@
 <h1 align="center">轻启</h1>
 
 <p align="center">
-  <a href="https://github.com/thx853068675-dev/quietstart/stargazers"><img src="https://img.shields.io/github/stars/thx853068675-dev/quietstart?style=flat-square&amp;logoColor=white&amp;label=Stars&amp;logo=github&amp;color=d6a23d" alt="Star 数" /></a>
-  <a href="https://github.com/thx853068675-dev/quietstart/releases"><img src="https://img.shields.io/github/downloads/thx853068675-dev/quietstart/total?style=flat-square&amp;logoColor=white&amp;label=%E4%B8%8B%E8%BD%BD%E9%87%8F&amp;logo=github&amp;color=3979b5" alt="累计附件下载量" /></a>
-  <a href="https://github.com/thx853068675-dev/quietstart/releases/latest"><img src="https://img.shields.io/github/v/release/thx853068675-dev/quietstart?style=flat-square&amp;logoColor=white&amp;label=%E6%9C%80%E6%96%B0%E7%89%88%E6%9C%AC&amp;logo=github&amp;color=36796b" alt="最新正式版本" /></a>
-  <a href="https://qm.qq.com/q/apWirjBLuo"><img src="https://img.shields.io/badge/QQ%E7%BE%A4-1125359809-12b7f5?style=flat-square&amp;logoColor=white&amp;logo=qq&amp;labelColor=444" alt="加入 QQ 交流群 1125359809" /></a>
-  <a href="https://t.me/+AEaSqM1kw4lmMmQ1"><img src="https://img.shields.io/badge/Telegram-%E5%8A%A0%E5%85%A5%E7%BE%A4%E7%BB%84-26a5e4?style=flat-square&amp;logo=telegram&amp;logoColor=white" alt="加入 Telegram 交流群" /></a>
+  HarmonyOS 原生页面控件识别辅助工具。按提示对页面识别与学习，自动生成规则。
 </p>
 
-HarmonyOS 原生页面控件识别辅助工具。按提示对页面识别与学习，自动生成规则。
+<p align="center">
+  <a href="https://github.com/thx853068675-dev/quietstart/releases/latest"><img src="https://img.shields.io/github/v/release/thx853068675-dev/quietstart?style=for-the-badge&amp;label=%E7%89%88%E6%9C%AC&amp;labelColor=263D38&amp;color=438875&amp;logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI%2BPGcgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIxLjkiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI%2BPHBhdGggZD0iTTIwIDEzIDExIDIyIDIgMTNWM2gxMFoiLz48Y2lyY2xlIGN4PSI3IiBjeT0iOCIgcj0iMSIvPjwvZz48L3N2Zz4%3D&amp;logoColor=white" alt="最新正式版本" height="28" /></a>
+  &nbsp;
+  <a href="https://github.com/thx853068675-dev/quietstart/stargazers"><img src="https://img.shields.io/github/stars/thx853068675-dev/quietstart?style=for-the-badge&amp;label=Stars&amp;labelColor=263D38&amp;color=577F71&amp;logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI%2BPGcgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIxLjkiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI%2BPHBhdGggZD0ibTEyIDMgMi44IDUuNyA2LjMuOS00LjYgNC40IDEuMSA2LjMtNS42LTMtNS42IDMgMS4xLTYuM0wyLjkgOS42bDYuMy0uOVoiLz48L2c%2BPC9zdmc%2B&amp;logoColor=white" alt="Star 数" height="28" /></a>
+  &nbsp;
+  <a href="https://github.com/thx853068675-dev/quietstart/releases"><img src="https://img.shields.io/github/downloads/thx853068675-dev/quietstart/total?style=for-the-badge&amp;label=%E4%B8%8B%E8%BD%BD&amp;labelColor=263D38&amp;color=577F71&amp;logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI%2BPGcgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIxLjkiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI%2BPHBhdGggZD0iTTEyIDN2MTJtLTUtNSA1IDUgNS01TTQgMTZ2NWgxNnYtNSIvPjwvZz48L3N2Zz4%3D&amp;logoColor=white" alt="累计附件下载量" height="28" /></a>
+</p>
+
+<p align="center">
+  <a href="https://qm.qq.com/q/apWirjBLuo"><img src="https://img.shields.io/badge/QQ-1125359809-438875?style=for-the-badge&amp;label=QQ+%E4%BA%A4%E6%B5%81%E7%BE%A4&amp;labelColor=263D38&amp;color=438875&amp;logo=qq&amp;logoColor=white" alt="加入 QQ 交流群 1125359809" height="28" /></a>
+  &nbsp;
+  <a href="https://t.me/+AEaSqM1kw4lmMmQ1"><img src="https://img.shields.io/badge/Telegram-%E5%8A%A0%E5%85%A5%E7%BE%A4%E7%BB%84-438875?style=for-the-badge&amp;label=Telegram&amp;labelColor=263D38&amp;color=438875&amp;logo=telegram&amp;logoColor=white" alt="加入 Telegram 交流群" height="28" /></a>
+</p>
 
 ## 下载与安装
 
