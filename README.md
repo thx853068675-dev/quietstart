@@ -41,6 +41,8 @@ HarmonyOS 应用的侧载签名与设备绑定；请使用整合助手为自己�
 
 **QQ群号：1125359809** · [点击加入 QQ 群](https://qm.qq.com/q/apWirjBLuo)
 
-可点击上方链接申请加群，也可使用 QQ 扫描下方二维码，或搜索群号加入。
+## Star
 
-<img src="docs/images/qq-group.jpeg" alt="轻启 QQ 交流群二维码，群号 1125359809" width="280" />
+支持开发者的最简单方式是点击页面顶部的星标（⭐）。
+
+[![Star History Chart](https://api.star-history.com/svg?repos=thx853068675-dev/quietstart&type=Date)](https://star-history.com/#thx853068675-dev/quietstart&Date)
