@@ -27,7 +27,7 @@
 - **手机端更新**：已安装“小白·轻启”的用户，可在手机选择新 HAP 重签安装。
 - 安装前请核对 Release 中提供的 SHA-256 校验值。
 
-整合包中的调试助手基于 [likuai2010](https://github.com/likuai2010) 的「小白调试助手」修改并集成轻启 HAP，感谢原作者的开发与贡献。原项目与官方下载：[auto-installer](https://github.com/likuai2010/auto-installer)。轻启整合版由本项目维护。
+整合包中的调试助手基于 [likuai2010](https://github.com/likuai2010) 的「小白调试助手」修改并集成轻启 HAP，感谢原作者的开发与贡献。
 
 HarmonyOS 应用的侧载签名与设备绑定；请使用整合助手为自己的设备完成签名和安装。
 
@@ -41,8 +41,8 @@ HarmonyOS 应用的侧载签名与设备绑定；请使用整合助手为自己�
 
 **QQ群号：1125359809** · [点击加入 QQ 群](https://qm.qq.com/q/apWirjBLuo)
 
-## Star
+## 重生之我还是码农
 
-支持开发者的最简单方式是点击页面顶部的星标（⭐）。
+上一世我疯狂写bug，遭到天道镇压，星星被全部没收。这一世洗心革面，赐我一颗⭐，助我重回巅峰！
 
 [![Star History Chart](https://api.star-history.com/svg?repos=thx853068675-dev/quietstart&type=Date)](https://star-history.com/#thx853068675-dev/quietstart&Date)
