@@ -18,11 +18,11 @@
   <a href="https://t.me/+AEaSqM1kw4lmMmQ1"><img src="https://img.shields.io/badge/Telegram-%E5%8A%A0%E5%85%A5%E7%BE%A4%E7%BB%84-438875?style=flat&amp;label=Telegram&amp;labelColor=2475A5&amp;color=DFEFF7&amp;logo=telegram&amp;logoColor=FFFFFF" alt="加入 Telegram 交流群" width="173" height="26" /></a>
 </p>
 
-## 开屏广告工具包
+## 自己制作工具包
 
-**[获取适配轻启 1.1.0 的开屏广告工具包（V5）](docs/tool-packs/splash-ad-v5.task.json)** · [查看导入步骤](docs/tool-packs/README.md)
+**[查看工具包制作教程](docs/TOOL_PACKS.md)**
 
-识别常见的“跳过”“关闭广告”按钮、倒计时按钮和部分图片控件。安装轻启后，在「工具包」页导入 JSON，再选择要运行的应用；新规则按应用内设置自动启用或等待确认。
+轻启 1.1.0 支持用户用 JSON 定义识别目标、执行动作和生效时机。教程从一份通用示例开始，说明如何修改、导入和验证自己的工具包。
 
 ## 下载与安装
 
