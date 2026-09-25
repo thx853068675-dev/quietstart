@@ -18,12 +18,6 @@
   <a href="https://t.me/+AEaSqM1kw4lmMmQ1"><img src="https://img.shields.io/badge/Telegram-%E5%8A%A0%E5%85%A5%E7%BE%A4%E7%BB%84-438875?style=flat&amp;label=Telegram&amp;labelColor=2475A5&amp;color=DFEFF7&amp;logo=telegram&amp;logoColor=FFFFFF" alt="加入 Telegram 交流群" width="173" height="26" /></a>
 </p>
 
-## 自己制作工具包
-
-**[查看工具包制作教程](docs/TOOL_PACKS.md)**
-
-轻启 1.1.0 支持用户用 JSON 定义识别目标、执行动作和生效时机。教程从一份通用示例开始，说明如何修改、导入和验证自己的工具包。
-
 ## 下载与安装
 
 请从 [Releases](https://github.com/thx853068675-dev/quietstart/releases/latest) 下载：
@@ -38,6 +32,12 @@
 HarmonyOS 应用的侧载签名与设备绑定；请使用整合助手为自己的设备完成签名和安装。
 
 完整步骤见 [安装与升级说明](docs/INSTALL.md)。1.1.0 默认采用计算任务后台保护，模拟定位仍可选。
+
+## 自己制作工具包
+
+**[查看工具包制作教程](docs/TOOL_PACKS.md)**
+
+轻启 1.1.0 支持用户用 JSON 定义识别目标、执行动作和生效时机。教程从一份通用示例开始，说明如何修改、导入和验证自己的工具包。
 
 ## 交流群
 
