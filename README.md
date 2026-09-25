@@ -18,6 +18,10 @@
   <a href="https://t.me/+AEaSqM1kw4lmMmQ1"><img src="https://img.shields.io/badge/Telegram-%E5%8A%A0%E5%85%A5%E7%BE%A4%E7%BB%84-438875?style=flat&amp;label=Telegram&amp;labelColor=2475A5&amp;color=DFEFF7&amp;logo=telegram&amp;logoColor=FFFFFF" alt="加入 Telegram 交流群" width="173" height="26" /></a>
 </p>
 
+<p align="center">
+  <img src="assets/interface-banner.svg" alt="轻启应用界面：本机连接、规则管理与运行记录" width="100%" />
+</p>
+
 ## 下载与安装
 
 请从 [Releases](https://github.com/thx853068675-dev/quietstart/releases/latest) 下载：
