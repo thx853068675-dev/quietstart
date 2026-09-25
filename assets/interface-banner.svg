@@ -104,20 +104,8 @@
     <path d="M1033 484h265" stroke="#e9eee9"/>
     <text x="1033" y="505" font-size="13" fill="#2a493e">使用指南</text>
     <path d="m1285 495 5 5-5 5" fill="none" stroke="#789386" stroke-width="1.6" stroke-linecap="round"/>
-    <rect x="993" y="520" width="345" height="35" fill="#fff"/>
-    <path d="M1030 530l8-6 8 6v11h-16z" fill="#23715e"/>
-    <rect x="1098" y="526" width="7" height="7" rx="1" fill="none" stroke="#89998f"/>
-    <rect x="1109" y="526" width="7" height="7" rx="1" fill="none" stroke="#89998f"/>
-    <rect x="1098" y="537" width="7" height="7" rx="1" fill="none" stroke="#89998f"/>
-    <rect x="1109" y="537" width="7" height="7" rx="1" fill="none" stroke="#89998f"/>
-    <rect x="1173" y="526" width="20" height="15" rx="2" fill="none" stroke="#89998f" stroke-width="1.5"/>
-    <path d="M1243 526q7-3 13 1v15q-6-4-13-1zm13 1q7-4 13-1v15q-6-3-13 1z" fill="none" stroke="#89998f" stroke-width="1.5"/>
-    <circle cx="1308" cy="534" r="8" fill="none" stroke="#89998f" stroke-width="1.5"/>
-    <circle cx="1308" cy="534" r="3" fill="#89998f"/>
-    <text x="1038" y="552" text-anchor="middle" font-size="9" fill="#23715e">概览</text>
-    <text x="1107" y="552" text-anchor="middle" font-size="9" fill="#89998f">应用</text>
-    <text x="1183" y="552" text-anchor="middle" font-size="9" fill="#89998f">工具包</text>
-    <text x="1256" y="552" text-anchor="middle" font-size="9" fill="#89998f">规则</text>
-    <text x="1308" y="552" text-anchor="middle" font-size="9" fill="#89998f">设置</text>
+    <rect x="993" y="522" width="345" height="33" fill="#fff"/>
+    <circle cx="1053" cy="538" r="5" fill="#23715e"/><circle cx="1134" cy="538" r="5" fill="#aebdb4"/>
+    <circle cx="1216" cy="538" r="5" fill="#aebdb4"/><circle cx="1296" cy="538" r="5" fill="#aebdb4"/>
   </g>
 </svg>
