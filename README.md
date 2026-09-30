@@ -27,9 +27,9 @@
 请从 [Releases](https://github.com/thx853068675-dev/quietstart/releases/latest) 下载：
 
 - **电脑端**：下载对应系统的整合包，使用包内助手安装轻启。
-- **手机端**：直接侧载[轻启·安装器 0.4.45](https://github.com/thx853068675-dev/quietstart/releases/download/v1.2.0/quietstart-installer-0.4.45-device6.1-signed.hap)，打开后在手机上一键安装轻启。
+- **手机端**：直接侧载[轻启·安装器 0.4.46](https://github.com/thx853068675-dev/quietstart/releases/download/v1.2.0/quietstart-installer-0.4.46-device6.1-signed.hap)，打开后在手机上一键安装轻启。
 
-安装器沿用此前 0.4.36 的 AGC 调试 Profile，仅可安装到该 Profile 已授权的设备。
+安装器沿用此前 0.4.36 的 AGC 调试 Profile，仅可安装到该 Profile 已授权的设备。0.4.46 已补上轻启内嵌工作模块的分层重签。
 
 原“小白·轻启”已弃用。完整步骤见 [安装与升级说明](docs/INSTALL.md)。
 
