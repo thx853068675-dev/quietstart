@@ -15,7 +15,9 @@
 
 ## 独立手机安装器附件
 
-独立附件为自研的 `quietstart-installer-0.4.36-signed.hap`，与 [QSStore v0.4.36](https://github.com/thx853068675-dev/QSStore/releases/tag/v0.4.36) 发布的文件一致。直接在手机侧载安装器，打开后选择轻启，一键完成安装。
+独立附件为自研的 `quietstart-installer-0.4.45-device6.1-signed.hap`，与 [本仓库 1.2.0 Release](https://github.com/thx853068675-dev/quietstart/releases/download/v1.2.0/quietstart-installer-0.4.45-device6.1-signed.hap) 发布的文件一致。直接在手机侧载安装器，打开后选择轻启，一键完成安装。
+
+安装器使用与旧版 0.4.36 相同的 AGC 调试 Profile，仅适用于该 Profile 已授权的设备。其他设备需要正式发布签名版本。
 
 安装完成后打开轻启，按向导完成本机连接，并确认概览显示“在线”。原“小白·轻启”已弃用。
 
