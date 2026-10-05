@@ -1,6 +1,6 @@
 # 工具包制作教程
 
-> 适用范围：轻启 1.2.1-beta（120311）及之后支持相同配置格式的版本。正式版 1.2.0 支持 `schema: 1/2`，暂不支持本文的合成包 `schema: 3`、`entryAfterClick`、`repeat.stopWhen` 和 `steps[].skipWhen`。导入前先看轻启首页的版本码。
+> 适用范围：本文按轻启 1.2.1-beta（120312）核对；合成包与新增流程字段从 120311 开始提供。正式版 1.2.0 支持 `schema: 1/2`，暂不支持本文的合成包 `schema: 3`、`entryAfterClick`、`repeat.stopWhen` 和 `steps[].skipWhen`。导入前先看轻启首页的版本码。
 >
 > 本文只讲如何设计、编写、校验和分发 JSON 工具包。所有字段的类型、取值与默认行为见 [能力接口字段手册](CAPABILITY_INTERFACE.md)。
 
