@@ -10,7 +10,7 @@
 |---|---|---|---|
 | `schema: 1` | 旧式可读包，供已有包导入 | 沿用旧格式 | 正式版 1.2.0 及以后 |
 | `schema: 2` | 一份独立任务 | `schema`、`id`、`name`、`version`、`when`、`steps` | 正式版 1.2.0 及以后；新增字段另见下文 |
-| `schema: 3` | 一份分发文件管理多项任务或连续广告，一个开关 | `schema`、`id`、`name`、`version`、`appliesTo`、`tasks`，以及两种入口之一 | 1.2.1-beta（120356）已核对 |
+| `schema: 3` | 一份分发文件管理多项任务或连续流程，一个开关 | `schema`、`id`、`name`、`version`、`appliesTo`、`tasks`，以及两种入口之一 | 1.2.1-beta（120356）已核对 |
 
 ### schema 2 顶层
 
@@ -42,9 +42,9 @@
 | `usage` | 可选，1–400 字符的非空字符串 | 同上；应写在合成包最外层。 |
 | `appliesTo` | **非空**应用包名数组 | 统一应用范围，规则同上。 |
 | `entryAfterClick` | 1–64 字符的页面标识 | 用户点击入口后，标识由未出现变为出现才激活内部任务。 |
-| `entryOnTap` | 1–4 项互不重复的入口文字，每项 1–64 字符 | 用户亲自点中其中一项后才启动连续奖励流程。与 `entryAfterClick` 二选一。 |
-| `rewardVideo` | 可选对象 | 连续视频奖励编排；必须配 `entryOnTap`，字段见第 11 节。 |
-| `landingVisit` | 可选对象 | 广告提示要求点击落地页时停留并返回；必须配 `entryAfterClick`，字段见第 11 节。 |
+| `entryOnTap` | 1–4 项互不重复的入口文字，每项 1–64 字符 | 用户亲自点中其中一项后才启动对应流程。与 `entryAfterClick` 二选一。 |
+| `rewardVideo` | 可选对象 | 特定连续奖励页面的编排；必须配 `entryOnTap`，字段见第 11 节。 |
+| `landingVisit` | 可选对象 | 按页面提示打开详情页、停留并返回；必须配 `entryAfterClick`，字段见第 11 节。 |
 | `tasks` | 1–8 份完整 `schema: 2` 文档；声明 `rewardVideo` 时可为空 | 各任务独立识别、动作与复核。 |
 
 子任务 `id` 必须互不重复，且不能与外层 `id` 相同；每个子任务的 `appliesTo` 必须与外层逐项一致。两种入口只在外层声明，必须且只能填写一个。未点击入口时，合成包不启动子任务的持续页面读取；点击后才确认目标页或入口文字。`entryAfterClick` 要求页面标识由未出现变为出现，路过已显示标识的页面不算新进入；新旧用户可以经过不同中间页。入口门控不代替子任务的页面条件和规则确认。`usage` 仅展示给用户，不能改变触发或动作。
@@ -113,7 +113,7 @@
 | `kinds` | 非空结构名数组，例如 `countdown-image`、`splash-corner`、`ocr-skip`、`ad-corner-image`、`ad-edge-control`、`modal-close`。只能命中引擎实际产出的结构目标。 |
 | `label` | 非空目标标签，与规则标签对应。 |
 | `semanticKind` | `kinds` 中的一项，标记语义接收者类型。 |
-| `adLayerIdGroups`、`containerIdGroups`、`buttonIdGroups` | 非空词组数组；每组为非空字符串数组，组内同时满足、组间满足任一组。`modal-close` 单独使用时可省略广告层与按钮组。 |
+| `adLayerIdGroups`、`containerIdGroups`、`buttonIdGroups` | 非空词组数组；每组为非空字符串数组，组内同时满足、组间满足任一组。`modal-close` 单独使用时可省略第一组与按钮组。 |
 | `pagePath`、`countdownWords` | 非空字符串数组；`modal-close` 单独使用时可省略。 |
 | `limit` | 同上，结构目标也受几何边界约束。 |
 
@@ -129,7 +129,7 @@
 | `absentText` | 1–8 项非空文字，每项最长 64 字符 | 当前可见页面不得包含任何一项，动作前重查。 |
 | `absentOnScreenText` | 1–8 项非空文字，每项最长 64 字符 | 指定文字的控件中心仍在屏幕内时不执行；用于任务虽存在于控件树、实际仍在屏幕外的页面。 |
 | `evidence.text`、`evidence.id` | 字符串数组 | 帮助确认目标所属语境，不替代动作前页面条件。 |
-| `evidence.cta`、`jump`、`jumpId`、`shake` | 可编译的正则字符串数组，每项最长 200 字符 | 广告落地入口旁证；只用于场景证明，不会变成目标白名单。 |
+| `evidence.cta`、`jump`、`jumpId`、`shake` | 可编译的正则字符串数组，每项最长 200 字符 | 页面跳转入口旁证；只用于场景证明，不会变成目标白名单。 |
 
 `cta`、`jump`、`jumpId` 只接受窗口下半部的旁证；`shake` 接受较高位置但需有动作词。`deny.context` 是排除语境字符串数组，与轻启内置排除条件合并，只能收紧。所有声明的页面条件在目标动作前都需重新核对；页面树不可用时，不能把“未看到”当作成功。
 
@@ -176,19 +176,19 @@
 
 `manual` 目前只支持 `{"capability":"layout-tap","title":"…","instruction":"…"}`，并且 `when.trigger` 必须是 `app-foreground`。`title` 为 1–24 字符，`instruction` 为 1–120 字符，均不能只含空白。它让用户主动发起页面布局点击示范，不是后台自动点击的替代触发。
 
-## 11. 1.2.1-beta 连续奖励与落地页字段
+## 11. 1.2.1-beta 扩展流程字段
 
 这些对象只写在 `schema: 3` 合成包最外层。所有区域均为 `[左,上,右,下]` 四个 0–1 数字，须满足左 < 右、上 < 下；坐标为 `[横,纵]` 两个 0–1 数字。区域相对当前窗口，不是固定像素。未列出的字段会拒绝导入。
 
-### `rewardVideo`：连续视频奖励
+### `rewardVideo`：连续奖励页面
 
-必须与 `entryOnTap` 同用；`tasks` 可以为空。用户点入口后，引擎识别广告就绪状态、关闭控件、领奖弹窗与续领入口，直到出现停止文字或达到 `maxAds`。关闭依据真实页面状态，不靠自己推算广告倒计时。
+必须与 `entryOnTap` 同用；`tasks` 可以为空。用户点入口后，引擎依据指定文字与区域识别可关闭状态、结果弹窗与下一轮入口，直到出现停止文字或达到 `maxAds`。关闭依据真实页面状态，不自行推算等待结束时刻。
 
 | 字段 | 类型与范围 | 作用 |
 |---|---|---|
-| `maxAds` | 整数 1–300 | 一轮最多处理的广告数量上界。 |
-| `adBadgeText`、`adReadyText` | 各 1–32 字符 | 广告标识、可关闭领奖的状态文字。 |
-| `adReadRegion`、`adCloseRegion` | 归一化区域 | 广告状态读取范围、关闭控件范围。 |
+| `maxAds` | 整数 1–300 | 一轮最多处理的连续次数上界。 |
+| `adBadgeText`、`adReadyText` | 各 1–32 字符 | 当前流程标识、可关闭的状态文字。 |
+| `adReadRegion`、`adCloseRegion` | 归一化区域 | 状态读取范围、关闭控件范围。 |
 | `dialogContextText`、`dialogNextText` | 各 1–32 字符 | 领奖弹窗语境与下一步按钮文字。 |
 | `dialogReadRegion`、`dialogButtonRegion` | 归一化区域 | 弹窗读取范围与按钮范围。 |
 | `resumeContextText`、`resumeNextText` | 各 1–32 字符 | 中断后续领弹窗的语境与按钮文字。 |
@@ -197,13 +197,13 @@
 
 这些字段只声明文字与区域；目标唯一性、当前前台归属、点击前后复核和连续次数限制由引擎执行。
 
-### `landingVisit`：按提示访问广告落地页
+### `landingVisit`：按提示访问详情页
 
-必须与 `entryAfterClick` 同用，且只作用于至少两步的子任务。广告提示满足 `promptText` 和可选的全部 `promptKeywords` 后，引擎才核对底部唯一可点击入口；普通倒计时广告若未满足提示，继续等待真实奖励状态，不点击落地页入口。
+必须与 `entryAfterClick` 同用，且只作用于至少两步的子任务。页面提示满足 `promptText` 和可选的全部 `promptKeywords` 后，引擎才核对底部唯一可点击入口；提示未满足时继续等待页面状态，不触发访问动作。
 
 | 字段 | 类型与范围 | 作用 |
 |---|---|---|
-| `promptText` | 1–64 字符 | 必须出现的广告提示。 |
+| `promptText` | 1–64 字符 | 必须出现的页面提示。 |
 | `promptKeywords` | 可选 1–4 项，每项 1–32 字符 | 与 `promptText` 同时出现才允许点击。 |
 | `promptRegion`、`buttonRegion` | 归一化区域 | 提示读取范围、底部唯一入口范围。 |
 | `dwellMs` | 整数 15000–30000 | 从点击入口起至少停留的时间；出现奖励状态可提前完成。 |
