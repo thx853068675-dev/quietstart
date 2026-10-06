@@ -31,7 +31,7 @@
 
 安装器附件的版本与签名状态以 Release 页面为准；无签名 HAP 不能直接安装。下载后请核对页面提供的 SHA-256 校验值。
 
-**1.2.1-beta 预览版**：[查看 120358 补丁发布](https://github.com/thx853068675-dev/quietstart/releases/tag/v1.2.1-beta-120358)。该预览只提供轻启 HAP 和最新版轻启·安装器 HAP，不提供电脑整合包；先用自己的开发者身份签装安装器，再由安装器导入轻启 HAP。
+**1.2.1-beta 预览版**：[查看 120359 补丁发布](https://github.com/thx853068675-dev/quietstart/releases/tag/v1.2.1-beta-120359)。该预览只提供轻启 HAP 和最新版轻启·安装器 HAP，不提供电脑整合包；先用自己的开发者身份签装安装器，再由安装器导入轻启 HAP。
 
 原“小白·轻启”已弃用。完整步骤见 [安装与升级说明](docs/INSTALL.md)。
 
