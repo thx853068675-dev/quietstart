@@ -31,7 +31,7 @@
 
 安装器附件的版本与签名状态以 Release 页面为准；无签名 HAP 不能直接安装。下载后请核对页面提供的 SHA-256 校验值。
 
-**1.2.2-beta 预览版**：[查看 120391 发布](https://github.com/thx853068675-dev/quietstart/releases/tag/v1.2.2-beta-120375)。提供轻启主包与轻启·安装器；先为无签名安装器签装，再用安装器导入轻启。
+**1.2.2-beta 预览版**：[查看 120391 发布](https://github.com/thx853068675-dev/quietstart/releases/tag/v1.2.2-beta-120391)。提供轻启主包与轻启·安装器；先为无签名安装器签装，再用安装器导入轻启。
 
 原“小白·轻启”已弃用。完整步骤见 [安装与升级说明](docs/INSTALL.md)。
 
