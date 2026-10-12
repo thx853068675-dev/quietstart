@@ -24,14 +24,15 @@
 
 ## 下载与安装
 
-请从 [Releases](https://github.com/thx853068675-dev/quietstart/releases/latest) 下载：
+**一台手机即可完成侧载，无需电脑：**
 
-- **电脑端**：下载对应系统的整合包，使用包内助手为自己的设备签名并安装轻启。
-- **手机端**：下载 Release 中的轻启·安装器无签名 HAP，先用自己的开发者签名为设备签名并侧载，再在安装器中安装轻启。
+1. 打开[轻启·安装器邀测链接](https://appgallery.huawei.com/link/invite-test-wap?taskId=228570a673362a352b80bb8db6992c85&invitationCode=4ZtxqMmENjl)，通过华为应用市场安装轻启·安装器。
+2. 按安装器引导完成账号、设备授权与本机连接，选择轻启并安装。
+3. 打开轻启，完成本机连接，导入并启用需要的兼容工具包。
 
-安装器附件的版本与签名状态以 Release 页面为准；无签名 HAP 不能直接安装。下载后请核对页面提供的 SHA-256 校验值。
+**1.2.2-beta 预览版**：[查看 120391 发布](https://github.com/thx853068675-dev/quietstart/releases/tag/v1.2.2-beta-120391)。下载对应轻启 HAP 后，可在安装器中从本地导入并安装。
 
-**1.2.2-beta 预览版**：[查看 120391 发布](https://github.com/thx853068675-dev/quietstart/releases/tag/v1.2.2-beta-120391)。提供轻启主包与轻启·安装器；先为无签名安装器签装，再用安装器导入轻启。
+**电脑端备用方案**：从 [Releases](https://github.com/thx853068675-dev/quietstart/releases/latest) 下载对应系统的整合包，使用包内助手为自己的设备签名并安装。
 
 原“小白·轻启”已弃用。完整步骤见 [安装与升级说明](docs/INSTALL.md)。
 
