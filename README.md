@@ -1,23 +1,59 @@
 <h1 align="center">轻启</h1>
 
-<p align="center">HarmonyOS 本地自动化底座 · 页面识别 · 示范学习 · 规则执行</p>
-
 <p align="center">
-  <a href="https://github.com/thx853068675-dev/quietstart/releases/tag/v1.2.4">下载 1.2.4</a> ·
-  <a href="https://appgallery.huawei.com/link/invite-test-wap?taskId=228570a673362a352b80bb8db6992c85&amp;invitationCode=4ZtxqMmENjl">安装轻启·安装器</a> ·
-  <a href="docs/TOOL_PACKS.md">工具包文档</a>
+  HarmonyOS 原生页面控件识别辅助工具。按提示对页面识别与学习，自动生成规则。
 </p>
 
-## 三步开始
+<p align="center">
+  <a href="https://github.com/thx853068675-dev/quietstart/releases/latest"><img src="https://img.shields.io/github/v/release/thx853068675-dev/quietstart?style=flat&amp;label=release&amp;labelColor=2475A5&amp;color=DBEDE2&amp;logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI%2BPGcgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIxLjkiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI%2BPHBhdGggZD0iTTIwIDEzIDExIDIyIDIgMTNWM2gxMFoiLz48Y2lyY2xlIGN4PSI3IiBjeT0iOCIgcj0iMSIvPjwvZz48L3N2Zz4%3D&amp;logoColor=FFFFFF" alt="最新正式版本" width="144" height="26" /></a>
+  &nbsp;
+  <a href="https://github.com/thx853068675-dev/quietstart#start-of-content" title="前往仓库顶部，点击 Star 支持轻启"><img src="https://img.shields.io/github/stars/thx853068675-dev/quietstart?style=flat&amp;label=Stars&amp;labelColor=2475A5&amp;color=EDF0D8&amp;logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI%2BPGcgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIxLjkiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI%2BPHBhdGggZD0ibTEyIDMgMi44IDUuNyA2LjMuOS00LjYgNC40IDEuMSA2LjMtNS42LTMtNS42IDMgMS4xLTYuM0wyLjkgOS42bDYuMy0uOVoiLz48L2c%2BPC9zdmc%2B&amp;logoColor=FFFFFF" alt="前往仓库顶部加星 · Star 数" width="103" height="26" /></a>
+  &nbsp;
+  <a href="https://github.com/thx853068675-dev/quietstart/releases"><img src="https://img.shields.io/github/downloads/thx853068675-dev/quietstart/total?style=flat&amp;label=downloads&amp;labelColor=2475A5&amp;color=E0EEF0&amp;logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI%2BPGcgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIxLjkiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI%2BPHBhdGggZD0iTTEyIDN2MTJtLTUtNSA1IDUgNS01TTQgMTZ2NWgxNnYtNSIvPjwvZz48L3N2Zz4%3D&amp;logoColor=FFFFFF" alt="累计附件下载量" width="157" height="26" /></a>
+</p>
 
-1. 用手机打开[安装器邀测链接](https://appgallery.huawei.com/link/invite-test-wap?taskId=228570a673362a352b80bb8db6992c85&invitationCode=4ZtxqMmENjl)，通过华为应用市场安装「轻启·安装器」。
-2. 下载[轻启 1.2.4 HAP](https://github.com/thx853068675-dev/quietstart/releases/download/v1.2.4/quietstart-1.2.4.hap)，在安装器中从本地导入，按引导签名并安装。
-3. 打开轻启完成本机连接，导入并启用需要的工具包。
+<p align="center">
+  <a href="https://qm.qq.com/q/apWirjBLuo"><img src="https://img.shields.io/badge/QQ-%E5%8A%A0%E5%85%A5%E7%BE%A4%E7%BB%84-438875?style=flat&amp;label=QQ+%E4%BA%A4%E6%B5%81%E7%BE%A4&amp;labelColor=2475A5&amp;color=DBEDE2&amp;logo=qq&amp;logoColor=FFFFFF" alt="加入 QQ 交流群 1125359809" width="178" height="26" /></a>
+  &nbsp;
+  <a href="https://t.me/+AEaSqM1kw4lmMmQ1"><img src="https://img.shields.io/badge/Telegram-%E5%8A%A0%E5%85%A5%E7%BE%A4%E7%BB%84-438875?style=flat&amp;label=Telegram&amp;labelColor=2475A5&amp;color=DFEFF7&amp;logo=telegram&amp;logoColor=FFFFFF" alt="加入 Telegram 交流群" width="173" height="26" /></a>
+</p>
 
-一台手机即可完成。工具包可自行编写或从社区获取；本项目只提供轻启本体。
+<p align="center">
+  <img src="assets/interface-banner.svg" alt="轻启应用界面：本机连接、规则管理与运行记录" width="100%" />
+</p>
 
-[安装与升级](docs/INSTALL.md) · [更新说明](https://github.com/thx853068675-dev/quietstart/releases/tag/v1.2.4)
+## 下载与安装
 
-## 交流
+**1.2.4 正式版**：[下载轻启 HAP](https://github.com/thx853068675-dev/quietstart/releases/download/v1.2.4/quietstart-1.2.4.hap) · [更新说明](https://github.com/thx853068675-dev/quietstart/releases/tag/v1.2.4)
 
-[QQ群 1125359809](https://qm.qq.com/q/apWirjBLuo) · [Telegram](https://t.me/+AEaSqM1kw4lmMmQ1)
+**一台手机即可完成侧载，无需电脑：**
+
+1. 打开[轻启·安装器邀测链接](https://appgallery.huawei.com/link/invite-test-wap?taskId=228570a673362a352b80bb8db6992c85&invitationCode=4ZtxqMmENjl)，通过华为应用市场安装轻启·安装器。
+2. 按安装器引导完成账号、设备授权与本机连接，从本地导入下载的轻启 HAP，签名并安装。
+3. 打开轻启，完成本机连接，导入并启用需要的兼容工具包。
+
+本次发布仅提供轻启 HAP 与校验文件。安装器通过上方邀测链接安装。
+
+原“小白·轻启”已弃用。完整步骤见 [安装与升级说明](docs/INSTALL.md)。
+
+## 自己制作工具包
+
+**[查看工具包制作教程](docs/TOOL_PACKS.md)**
+
+[查看能力接口字段手册](docs/CAPABILITY_INTERFACE.md)
+
+轻启支持用户用 JSON 定义识别目标、执行动作和生效时机。教程从一份通用示例开始，说明如何修改、导入和验证自己的工具包。
+
+## 交流群
+
+欢迎加入「轻启」讨论群，交流使用体验、反馈问题。
+
+[Telegram 交流群](https://t.me/+AEaSqM1kw4lmMmQ1)
+
+**QQ群号：1125359809** · [点击加入 QQ 群](https://qm.qq.com/q/apWirjBLuo)
+
+## 重生之我还是码农
+
+上一世我疯狂写bug，遭到天道镇压，星星被全部没收。这一世洗心革面，赐我一颗⭐，助我重回巅峰！
+
+[![Star History Chart](https://api.star-history.com/svg?repos=thx853068675-dev/quietstart&type=Date)](https://star-history.com/#thx853068675-dev/quietstart&Date)
