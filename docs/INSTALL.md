@@ -1,12 +1,19 @@
 # 安装与升级
 
-一台手机即可完成侧载。
+## 手机端侧载
 
-1. 打开[轻启·安装器邀测链接](https://appgallery.huawei.com/link/invite-test-wap?taskId=228570a673362a352b80bb8db6992c85&invitationCode=4ZtxqMmENjl)，通过华为应用市场安装安装器。
-2. 按安装器引导完成账号、设备授权及本机连接。
-3. 下载[轻启 1.2.4 HAP](https://github.com/thx853068675-dev/quietstart/releases/download/v1.2.4/quietstart-1.2.4.hap)，从安装器的本地导入入口选择文件，签名并安装。
+1. 从[轻启·安装器发布页](https://github.com/thx853068675-dev/QSStore/releases/latest)下载正式版无签名 HAP。
+2. 使用自己的华为开发者身份，通过已有签名侧载工具为目标设备签名并安装轻启·安装器。无签名 HAP 不能直接点击安装。
+3. 下载[轻启 1.2.4 HAP](https://github.com/thx853068675-dev/quietstart/releases/download/v1.2.4/quietstart-1.2.4.hap)，打开安装器，完成账号、设备授权及本机连接，从本地导入轻启 HAP，签名并安装。
 4. 打开轻启，完成本机连接，确认概览显示“在线”。使用期间保持无线调试开启。
 5. 导入并启用需要的兼容工具包，再启用对应应用。工具包可自行编写或从社区获取，见[制作教程](TOOL_PACKS.md)。
+
+## 电脑端侧载
+
+1. 从[桌面助手发布页](https://github.com/thx853068675-dev/quietstart-installer/releases/latest)下载对应平台的助手，解压完整目录。
+2. 手机开启开发者模式和 USB 调试，连接电脑并允许调试授权。
+3. 在助手中使用自己的开发者身份，导入最新轻启 HAP，为目标设备重新签名安装。需要同时处理主包和内置工作模块的签名。
+4. 打开轻启，按向导完成本机连接，再导入并启用需要的兼容工具包。
 
 ## 升级
 
