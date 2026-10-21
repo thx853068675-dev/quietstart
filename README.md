@@ -26,6 +26,8 @@
 
 **1.2.7 正式版**：[下载轻启 HAP](https://github.com/thx853068675-dev/quietstart/releases/download/v1.2.7/quietstart-1.2.7.hap) · [更新说明](https://github.com/thx853068675-dev/quietstart/releases/tag/v1.2.7)
 
+**1.2.8-beta 测试版**：[下载轻启 HAP](https://github.com/thx853068675-dev/quietstart/releases/download/v1.2.8-beta-128002/quietstart-1.2.8-beta-128002.hap) · [更新说明](https://github.com/thx853068675-dev/quietstart/releases/tag/v1.2.8-beta-128002)
+
 - **手机端**：从[轻启·安装器发布页](https://github.com/thx853068675-dev/QSStore/releases/latest)下载无签名 HAP，使用自己的开发者身份为目标设备签名并侧载安装器；打开安装器，从本地导入轻启 HAP，签名并安装。
 - **电脑端**：从[桌面助手发布页](https://github.com/thx853068675-dev/quietstart-installer/releases/latest)下载对应平台的助手，连接手机，导入最新轻启 HAP 后重新签名安装。
 
